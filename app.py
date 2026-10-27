@@ -389,3 +389,173 @@ st.caption(
     "Note: This opens Google Maps in a new page. "
     "Nearby places and distances should be verified independently."
 )
+# Home Affordability and True Cost Calculator
+st.divider()
+st.header("🏠 Home Affordability & True Cost Calculator")
+
+st.warning(
+    "ESTIMATES ONLY: This calculator uses your inputs and "
+    "illustrative assumptions. It does not provide verified bank "
+    "offers, legal charges, or financial advice."
+)
+
+st.subheader("1. Your finances")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    monthly_income = st.number_input(
+        "Monthly household income (₹)",
+        min_value=0,
+        value=80000,
+        step=5000,
+        key="aff_income",
+    )
+    existing_emi = st.number_input(
+        "Existing monthly EMIs (₹)",
+        min_value=0,
+        value=5000,
+        step=1000,
+        key="aff_existing_emi",
+    )
+    savings = st.number_input(
+        "Savings available (₹)",
+        min_value=0,
+        value=1000000,
+        step=50000,
+        key="aff_savings",
+    )
+
+with col2:
+    down_payment_percent = st.slider(
+        "Down payment (%)",
+        min_value=10,
+        max_value=50,
+        value=20,
+        key="aff_down_payment",
+    )
+    interest_rate = st.number_input(
+        "Annual home-loan interest rate (%)",
+        min_value=1.0,
+        max_value=20.0,
+        value=8.5,
+        step=0.25,
+        key="aff_interest",
+    )
+    loan_years = st.slider(
+        "Loan tenure (years)",
+        min_value=5,
+        max_value=30,
+        value=20,
+        key="aff_tenure",
+    )
+
+st.subheader("2. Buying costs (editable assumptions)")
+
+col3, col4 = st.columns(2)
+
+with col3:
+    purchase_cost_percent = st.number_input(
+        "Registration, stamp duty & other costs (%)",
+        min_value=0.0,
+        max_value=20.0,
+        value=7.0,
+        step=0.5,
+        key="aff_purchase_costs",
+        help="Illustrative only. Actual charges vary by location and buyer.",
+    )
+
+with col4:
+    monthly_maintenance = st.number_input(
+        "Estimated monthly maintenance (₹)",
+        min_value=0,
+        value=3000,
+        step=500,
+        key="aff_maintenance",
+    )
+
+# Estimate an affordable monthly loan payment.
+available_monthly = max(
+    0,
+    monthly_income * 0.35 - existing_emi - monthly_maintenance
+)
+
+monthly_rate = interest_rate / 1200
+number_of_payments = loan_years * 12
+
+if monthly_rate > 0:
+    emi_factor = (
+        monthly_rate * (1 + monthly_rate) ** number_of_payments
+        / ((1 + monthly_rate) ** number_of_payments - 1)
+    )
+else:
+    emi_factor = 1 / number_of_payments
+
+affordable_loan = (
+    available_monthly / emi_factor
+    if emi_factor > 0 else 0
+)
+
+down_fraction = down_payment_percent / 100
+cost_fraction = purchase_cost_percent / 100
+
+# Estimate a budget considering both income and available savings.
+cash_budget = savings / (
+    down_fraction + cost_fraction
+) if down_fraction + cost_fraction > 0 else 0
+
+income_budget = (
+    affordable_loan / (1 - down_fraction)
+    if down_fraction < 1 else 0
+)
+
+estimated_home_budget = min(cash_budget, income_budget)
+
+estimated_down_payment = estimated_home_budget * down_fraction
+estimated_extra_costs = estimated_home_budget * cost_fraction
+estimated_loan = estimated_home_budget - estimated_down_payment
+
+estimated_emi = estimated_loan * emi_factor
+estimated_monthly_total = (
+    estimated_emi + monthly_maintenance + existing_emi
+)
+
+st.divider()
+st.subheader("3. Your estimated results")
+
+r1, r2, r3 = st.columns(3)
+
+r1.metric(
+    "Estimated home budget",
+    f"₹{estimated_home_budget:,.0f}",
+)
+r2.metric(
+    "Estimated loan amount",
+    f"₹{estimated_loan:,.0f}",
+)
+r3.metric(
+    "Estimated monthly loan EMI",
+    f"₹{estimated_emi:,.0f}",
+)
+
+r4, r5, r6 = st.columns(3)
+
+r4.metric(
+    "Estimated down payment",
+    f"₹{estimated_down_payment:,.0f}",
+)
+r5.metric(
+    "Estimated buying costs",
+    f"₹{estimated_extra_costs:,.0f}",
+)
+r6.metric(
+    "Monthly outgo including existing EMIs",
+    f"₹{estimated_monthly_total:,.0f}",
+)
+
+st.caption(
+    "Illustrative calculation only. The 35% income allowance, "
+    "interest rate, costs and maintenance are assumptions, not "
+    "verified lender criteria or property-specific quotations. "
+    "Actual eligibility and expenses may differ."
+)
