@@ -2,122 +2,284 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.pipeline import Pipeline
+from sklearn.ensemble import RandomForestRegressor
 
-# -----------------------------
-# SmartProperty AI
-# Beginner-friendly property analysis demo
-# -----------------------------
-st.set_page_config(page_title="SmartProperty AI", page_icon="🏡", layout="wide")
+# -------------------------------
+# SmartProperty AI - Advanced Demo
+# -------------------------------
+st.set_page_config(
+    page_title="SmartProperty AI",
+    page_icon="🏡",
+    layout="wide"
+)
 
-DATA_FILE = Path(__file__).parent / "data" / "properties.csv"
+BASE_DIR = Path(__file__).parent
+DATA_FILE = BASE_DIR / "data" / "properties.csv"
 
 st.title("🏡 SmartProperty AI")
-st.subheader("Simple property price and rental analysis")
-st.caption("Student project demo • Sample listings are illustrative, not verified market data.")
+st.subheader("Real Estate Analytics & Price Prediction")
+st.caption(
+    "AI/ML student prototype | Predictions use illustrative sample data."
+)
 
 @st.cache_data
-def load_properties():
-    return pd.read_csv(DATA_FILE)
+def load_data():
+    df = pd.read_csv(DATA_FILE)
+    required = [
+        "property_name", "location", "property_type",
+        "price_lakh", "area_sqft", "monthly_rent",
+        "building_age"
+    ]
+    missing = [col for col in required if col not in df.columns]
+    if missing:
+        raise ValueError(f"Missing CSV columns: {', '.join(missing)}")
 
-properties = load_properties()
+    df = df.dropna(subset=required).copy()
+    df = df[df["area_sqft"] > 0]
+    return df
 
+@st.cache_resource
+def train_model(data):
+    features = [
+        "location", "property_type",
+        "area_sqft", "building_age"
+    ]
+
+    transformer = ColumnTransformer([
+        (
+            "category",
+            OneHotEncoder(handle_unknown="ignore"),
+            ["location", "property_type"]
+        ),
+        ("numbers", "passthrough", ["area_sqft", "building_age"])
+    ])
+
+    pipeline = Pipeline([
+        ("preprocessor", transformer),
+        ("model", RandomForestRegressor(
+            n_estimators=100,
+            random_state=42
+        ))
+    ])
+
+    pipeline.fit(data[features], data["price_lakh"])
+    return pipeline
+
+try:
+    properties = load_data()
+except Exception as error:
+    st.error(f"Could not load property data: {error}")
+    st.stop()
+
+if len(properties) < 5:
+    st.error("Please add at least 5 valid sample properties.")
+    st.stop()
+
+model = train_model(properties)
+
+# Sidebar inputs
 with st.sidebar:
-    st.header("Property details")
+    st.header("🏠 Property details")
+
     location = st.selectbox(
         "Location",
-        sorted(properties["location"].dropna().unique().tolist()),
-        index=0
+        sorted(properties["location"].unique())
     )
-    property_type = st.selectbox("Property type", ["Apartment", "House", "Shop", "Office"])
-    price_lakh = st.number_input("Asking price (₹ lakh)", min_value=1.0, max_value=10000.0, value=60.0, step=1.0)
-    area = st.number_input("Carpet area (sq. ft.)", min_value=50.0, max_value=100000.0, value=600.0, step=10.0)
-    age = st.number_input("Building age (years)", min_value=0, max_value=150, value=5, step=1)
-    monthly_rent = st.number_input("Expected monthly rent (₹)", min_value=0, max_value=10000000, value=15000, step=1000)
-    compare_location_only = st.checkbox("Compare with selected location", value=True)
 
+    property_type = st.selectbox(
+        "Property type",
+        sorted(properties["property_type"].unique())
+    )
+
+    price_lakh = st.number_input(
+        "Asking price (₹ lakh)",
+        min_value=1.0,
+        max_value=10000.0,
+        value=60.0,
+        step=1.0
+    )
+
+    area = st.number_input(
+        "Area (sq. ft.)",
+        min_value=50,
+        max_value=100000,
+        value=600,
+        step=10
+    )
+
+    age = st.number_input(
+        "Building age (years)",
+        min_value=0,
+        max_value=150,
+        value=5,
+        step=1
+    )
+
+    monthly_rent = st.number_input(
+        "Expected monthly rent (₹)",
+        min_value=0,
+        max_value=10000000,
+        value=15000,
+        step=1000
+    )
+
+    compare_location = st.checkbox(
+        "Compare with selected location",
+        value=True
+    )
+
+# Calculations
 price_rupees = price_lakh * 100000
-price_per_sqft = price_rupees / area if area > 0 else 0
+price_per_sqft = price_rupees / area
 annual_rent = monthly_rent * 12
-gross_yield = (annual_rent / price_rupees * 100) if price_rupees > 0 else 0
+gross_yield = annual_rent / price_rupees * 100
 
-# Compare against sample listing data using the same area basis (carpet area).
+input_data = pd.DataFrame([{
+    "location": location,
+    "property_type": property_type,
+    "area_sqft": area,
+    "building_age": age
+}])
+
+predicted_lakh = max(0, float(model.predict(input_data)[0]))
+difference = price_lakh - predicted_lakh
+difference_percent = (
+    difference / predicted_lakh * 100
+    if predicted_lakh > 0 else 0
+)
+
+# Dashboard metrics
+st.markdown("## 📊 Property dashboard")
+
+m1, m2, m3, m4 = st.columns(4)
+m1.metric("Asking price", f"₹{price_lakh:,.1f} lakh")
+m2.metric("ML price estimate", f"₹{predicted_lakh:,.1f} lakh")
+m3.metric("Price per sq. ft.", f"₹{price_per_sqft:,.0f}")
+m4.metric("Gross rental yield", f"{gross_yield:.2f}%")
+
+st.divider()
+
+# Prediction explanation
+st.markdown("## 🤖 AI price analysis")
+
+left, right = st.columns(2)
+
+with left:
+    st.markdown("### Estimated vs asking price")
+    comparison_chart = pd.DataFrame({
+        "Price type": ["ML estimate", "Asking price"],
+        "Price (₹ lakh)": [predicted_lakh, price_lakh]
+    }).set_index("Price type")
+
+    st.bar_chart(comparison_chart)
+
+with right:
+    st.markdown("### Assessment")
+
+    if abs(difference_percent) <= 10:
+        st.info(
+            "The asking price is within 10% of the model estimate. "
+            "Check more comparable properties before deciding."
+        )
+    elif difference > 0:
+        st.warning(
+            f"The asking price is {difference_percent:.1f}% above "
+            "the model estimate. Investigate the difference."
+        )
+    else:
+        st.success(
+            f"The asking price is {abs(difference_percent):.1f}% below "
+            "the model estimate. Verify property condition and documents."
+        )
+
+    st.write(f"Estimated annual rent: ₹{annual_rent:,.0f}")
+    st.write(f"Estimated monthly rent: ₹{monthly_rent:,.0f}")
+
+    st.caption(
+        "Gross yield excludes maintenance, vacancy, taxes and "
+        "other ownership costs."
+    )
+
+# Comparable sample properties
+st.markdown("## 🏘️ Comparable properties")
+
 comparison = properties.copy()
-if compare_location_only:
+
+if compare_location:
     comparison = comparison[comparison["location"] == location]
 
-comparison = comparison[comparison["area_sqft"] > 0].copy()
-comparison["price_per_sqft"] = comparison["price_lakh"] * 100000 / comparison["area_sqft"]
-median_price = comparison["price_per_sqft"].median() if not comparison.empty else None
+comparison["price_per_sqft"] = (
+    comparison["price_lakh"] * 100000 / comparison["area_sqft"]
+)
 
-st.markdown("### Your property analysis")
-c1, c2, c3 = st.columns(3)
-c1.metric("Price per sq. ft.", f"₹{price_per_sqft:,.0f}")
-c2.metric("Gross rental yield", f"{gross_yield:.2f}%")
-c3.metric("Annual rent", f"₹{annual_rent:,.0f}")
-
-st.markdown("### Explainable assessment")
-if median_price is None or pd.isna(median_price):
-    st.warning("There are no comparison listings for this selection. Add more sample data before comparing.")
-else:
-    difference = ((price_per_sqft - median_price) / median_price) * 100 if median_price else 0
-    st.write(f"Selected area: **{location}**")
-    st.write(f"Median price per sq. ft. in the sample: **₹{median_price:,.0f}**")
-    st.write(f"Your entered property is **{abs(difference):.1f}% {'above' if difference > 0 else 'below' if difference < 0 else 'at'}** the sample median by price per sq. ft.")
-    if difference > 10:
-        st.info("Assessment: The asking price is noticeably above this sample's median. Check whether location, condition, floor, amenities, and building age explain the difference.")
-    elif difference < -10:
-        st.info("Assessment: The asking price is noticeably below this sample's median. Verify the listing details, condition, title, and other possible reasons before drawing conclusions.")
-    else:
-        st.info("Assessment: The asking price is within about 10% of this sample's median. Compare more similar properties before judging value.")
-
-if monthly_rent > 0:
-    st.write(f"At ₹{monthly_rent:,.0f} monthly rent, gross annual rent is **₹{annual_rent:,.0f}**.")
-    st.caption("Gross rental yield excludes maintenance, repairs, taxes, vacancy, and buying costs. It is not net return.")
-
-st.markdown("### Compare sample listings")
 if not comparison.empty:
-    display = comparison.copy()
-    display["Asking price (₹ lakh)"] = display["price_lakh"].map(lambda x: f"₹{x:,.1f} lakh")
-    display["Carpet area (sq. ft.)"] = display["area_sqft"].map(lambda x: f"{x:,.0f}")
-    display["Price / sq. ft."] = display["price_per_sqft"].map(lambda x: f"₹{x:,.0f}")
+    median_price = comparison["price_per_sqft"].median()
+    st.metric(
+        "Sample median price per sq. ft.",
+        f"₹{median_price:,.0f}"
+    )
+
     st.dataframe(
-        display[["property_name", "location", "property_type", "Asking price (₹ lakh)", "Carpet area (sq. ft.)", "Price / sq. ft."]],
+        comparison[[
+            "property_name", "location", "property_type",
+            "price_lakh", "area_sqft", "monthly_rent",
+            "building_age", "price_per_sqft"
+        ]].rename(columns={
+            "property_name": "Property",
+            "price_lakh": "Price (₹ lakh)",
+            "area_sqft": "Area (sq. ft.)",
+            "monthly_rent": "Monthly rent (₹)",
+            "building_age": "Age (years)",
+            "price_per_sqft": "Price / sq. ft. (₹)"
+        }),
         use_container_width=True,
         hide_index=True
     )
 
-    chart_data = comparison.sort_values("price_per_sqft")
+    st.markdown("### Sample price distribution")
     fig, ax = plt.subplots()
-    ax.bar(chart_data["property_name"], chart_data["price_per_sqft"])
-    ax.set_title("Sample listing price per sq. ft.")
-    ax.set_ylabel("₹ per sq. ft.")
+    ax.bar(
+        comparison["property_name"],
+        comparison["price_lakh"]
+    )
     ax.set_xlabel("Sample property")
+    ax.set_ylabel("Price (₹ lakh)")
     ax.tick_params(axis="x", rotation=35)
     fig.tight_layout()
     st.pyplot(fig)
     plt.close(fig)
 else:
-    st.warning("No comparison data available for this location.")
+    st.info("No comparable properties found for this selection.")
 
-st.markdown("### Download your analysis")
+# Download report
+st.markdown("## 📥 Download your analysis")
+
 report = pd.DataFrame([{
     "location": location,
     "property_type": property_type,
     "asking_price_lakh": price_lakh,
-    "carpet_area_sqft": area,
-    "building_age_years": age,
-    "monthly_rent_rupees": monthly_rent,
+    "predicted_price_lakh": round(predicted_lakh, 2),
+    "area_sqft": area,
+    "building_age": age,
     "price_per_sqft_rupees": round(price_per_sqft, 2),
+    "monthly_rent_rupees": monthly_rent,
     "annual_rent_rupees": annual_rent,
-    "gross_rental_yield_percent": round(gross_yield, 2),
-    "sample_median_price_per_sqft": round(float(median_price), 2) if median_price is not None and not pd.isna(median_price) else None
+    "gross_rental_yield_percent": round(gross_yield, 2)
 }])
+
 st.download_button(
-    "Download analysis as CSV",
+    "Download property report (CSV)",
     data=report.to_csv(index=False).encode("utf-8"),
-    file_name="smartproperty_analysis.csv",
+    file_name="smartproperty_ai_report.csv",
     mime="text/csv"
 )
 
 st.divider()
-st.caption("Limitations: This demo uses illustrative sample listings. It is not a valuation, investment recommendation, legal check, or guarantee of market price. Verify all property information independently.")
+st.caption(
+    "Educational prototype only. The model trains on a very small "
+    "illustrative dataset and may produce misleading estimates. "
+    "It is not a verified market valuation or investment advice."
+)
