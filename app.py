@@ -399,7 +399,11 @@ st.warning(
     "offers, legal charges, or financial advice."
 )
 
-st.subheader("1. Your finances")
+st.subheader("1. Check Your Home Budget")
+st.caption(
+    "Estimate how much home you may be able to afford "
+    "based on your income, savings and existing loan payments."
+)
 
 col1, col2 = st.columns(2)
 
@@ -450,7 +454,12 @@ with col2:
         key="aff_tenure",
     )
 
-st.subheader("2. Buying costs (editable assumptions)")
+st.subheader("2. Extra Home Costs")
+st.caption(
+    "Estimate how much extra money you may need for "
+    "stamp duty, registration and other buying expenses, "
+    "along with your monthly maintenance costs."
+)
 
 col3, col4 = st.columns(2)
 
@@ -521,7 +530,12 @@ estimated_monthly_total = (
 )
 
 st.divider()
-st.subheader("3. Your estimated results")
+st.subheader("3. Your Results")
+st.caption(
+    "See your estimated home budget, down payment, "
+    "home loan amount, monthly EMI and total monthly expenses "
+    "to help you plan your home purchase."
+)
 
 r1, r2, r3 = st.columns(3)
 
