@@ -408,8 +408,7 @@ st.caption(
 col1, col2 = st.columns(2)
 
 with col1:
-    monthly_income = st.number_input(
-    "Monthly household income (₹)",
+    monthly_income = st.number_input("Monthly household income (₹)",
     min_value=0,
     value=80000,
     step=5000,
@@ -419,8 +418,7 @@ with col1:
 st.caption(
     "Example: ₹80,000 means your household earns ₹80,000 per month."
 )
-    existing_emi = st.number_input(
-        "Existing monthly EMIs (₹)",
+    existing_emi = st.number_input("Existing monthly EMIs (₹)",
         min_value=0,
         value=5000,
         step=1000,
