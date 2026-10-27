@@ -15,7 +15,88 @@ st.set_page_config(
     page_icon="🏡",
     layout="wide"
 )
+st.markdown("""
+<style>
+    .stApp {
+        background: #f4f7fb;
+        color: #17243a;
+    }
 
+    [data-testid="stSidebar"] {
+        background: #101d35;
+    }
+
+    [data-testid="stSidebar"] * {
+        color: #f5f7fb;
+    }
+
+    .block-container {
+        max-width: 1440px;
+        padding-top: 2rem;
+        padding-bottom: 3rem;
+    }
+
+    h1 {
+        color: #142747;
+        font-weight: 800;
+        letter-spacing: -1px;
+    }
+
+    h2, h3 {
+        color: #203a60;
+        font-weight: 700;
+    }
+
+    [data-testid="stMetric"] {
+        background: white;
+        border: 1px solid #e3eaf3;
+        padding: 22px 20px;
+        border-radius: 14px;
+        box-shadow: 0 4px 16px rgba(24, 45, 75, 0.05);
+    }
+
+    [data-testid="stMetricLabel"] {
+        color: #64748b;
+        font-weight: 600;
+    }
+
+    [data-testid="stMetricValue"] {
+        color: #163b70;
+        font-weight: 800;
+    }
+
+    div[data-testid="stAlert"] {
+        border-radius: 12px;
+    }
+
+    div.stButton > button,
+    div.stDownloadButton > button {
+        background: #2458a6;
+        color: white;
+        border: none;
+        border-radius: 9px;
+        padding: 0.65rem 1rem;
+        font-weight: 600;
+    }
+
+    div.stButton > button:hover,
+    div.stDownloadButton > button:hover {
+        background: #173e79;
+        color: white;
+        border: none;
+    }
+
+    [data-testid="stDataFrame"] {
+        border: 1px solid #e3eaf3;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    hr {
+        border-color: #dfe7f1;
+    }
+</style>
+""", unsafe_allow_html=True)
 BASE_DIR = Path(__file__).parent
 DATA_FILE = BASE_DIR / "data" / "properties.csv"
 
