@@ -409,12 +409,16 @@ col1, col2 = st.columns(2)
 
 with col1:
     monthly_income = st.number_input(
-        "Monthly household income (₹)",
-        min_value=0,
-        value=80000,
-        step=5000,
-        key="aff_income",
-    )
+    "Monthly household income (₹)",
+    min_value=0,
+    value=80000,
+    step=5000,
+    key="aff_income",
+    help="Total money earned by everyone in your household each month."
+)
+st.caption(
+    "Example: ₹80,000 means your household earns ₹80,000 per month."
+)
     existing_emi = st.number_input(
         "Existing monthly EMIs (₹)",
         min_value=0,
@@ -465,22 +469,38 @@ col3, col4 = st.columns(2)
 
 with col3:
     purchase_cost_percent = st.number_input(
-        "Registration, stamp duty & other costs (%)",
+        "Extra buying costs (% of home price)",
         min_value=0.0,
         max_value=20.0,
         value=7.0,
         step=0.5,
         key="aff_purchase_costs",
-        help="Illustrative only. Actual charges vary by location and buyer.",
+        help=(
+            "An estimate for stamp duty, property registration "
+            "and other purchase-related expenses. Actual charges "
+            "vary by location."
+        ),
+    )
+    st.caption(
+        "Example: 7% means about ₹70,000 in extra costs "
+        "for a ₹10 lakh property."
     )
 
 with col4:
     monthly_maintenance = st.number_input(
-        "Estimated monthly maintenance (₹)",
+        "Monthly property maintenance (₹)",
         min_value=0,
         value=3000,
         step=500,
         key="aff_maintenance",
+        help=(
+            "Estimated recurring costs such as housing society "
+            "maintenance. Actual costs may differ."
+        ),
+    )
+    st.caption(
+        "Example: ₹3,000 means an estimated maintenance "
+        "payment of ₹3,000 each month."
     )
 
 # Estimate an affordable monthly loan payment.
