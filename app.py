@@ -408,30 +408,35 @@ st.caption(
 col1, col2 = st.columns(2)
 
 with col1:
-    monthly_income = st.number_input("Monthly household income (₹)",
-    min_value=0,
-    value=80000,
-    step=5000,
-    key="aff_income",
-    help="Total money earned by everyone in your household each month."
-)
-st.caption(
-    "Example: ₹80,000 means your household earns ₹80,000 per month."
-)
-    existing_emi = st.number_input("Existing monthly EMIs (₹)",
+    monthly_income = st.number_input(
+        "Monthly household income (₹)",
+        min_value=0,
+        value=80000,
+        step=5000,
+        key="aff_income",
+        help="Total money earned by everyone in your household each month."
+    )
+    st.caption("Example: ₹80,000 means your household earns ₹80,000 per month.")
+
+    existing_emi = st.number_input(
+        "Existing monthly loan payments (₹)",
         min_value=0,
         value=5000,
         step=1000,
         key="aff_existing_emi",
+        help="Payments you already make each month for other loans."
     )
+    st.caption("Example: ₹5,000 means you already pay ₹5,000 each month toward other loans.")
+
     savings = st.number_input(
-        "Savings available (₹)",
+        "Savings available for buying a home (₹)",
         min_value=0,
         value=1000000,
         step=50000,
         key="aff_savings",
+        help="Money available for your down payment and extra buying costs."
     )
-
+    st.caption("Example: ₹10,00,000 means ten lakh rupees saved for the purchase.")
 with col2:
     down_payment_percent = st.slider(
         "Down payment (%)",
