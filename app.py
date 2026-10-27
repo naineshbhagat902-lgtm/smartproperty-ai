@@ -364,3 +364,28 @@ st.caption(
     "illustrative dataset and may produce misleading estimates. "
     "It is not a verified market valuation or investment advice."
 )
+# Location map and neighbourhood insights
+st.divider()
+st.subheader("📍 Location & Neighbourhood Insights")
+
+st.write(
+    "Explore the selected property location on Google Maps. "
+    "Location results depend on Google Maps search data."
+)
+
+import urllib.parse
+
+maps_query = urllib.parse.quote(
+    f"{location}, India"
+)
+
+st.link_button(
+    "🗺️ View Neighbourhood on Google Maps",
+    f"https://www.google.com/maps/search/?api=1&query={maps_query}",
+    use_container_width=True
+)
+
+st.caption(
+    "Note: This opens Google Maps in a new page. "
+    "Nearby places and distances should be verified independently."
+)
