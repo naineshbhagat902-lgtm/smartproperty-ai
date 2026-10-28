@@ -1,4 +1,8 @@
-# SmartProperty AI
+## 🚀 Live Demo
+
+ [Smart Property Analysis](https://smartproperty-ai-4phagzfqbbappxqsqq4adne.streamlit.app)
+ 
+ # SmartProperty AI
 
 A beginner-friendly Streamlit project for property price and rental analysis.
 
