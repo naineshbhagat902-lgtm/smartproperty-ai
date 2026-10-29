@@ -1,12 +1,12 @@
-property_name,location,property_type,price_lakh,area_sqft,monthly_rent,building_age
-Sample Flat A,Panvel,Apartment,58,620,14500,5
-Sample Flat B,Panvel,Apartment,62,600,15500,8
-Sample Flat C,Panvel,Apartment,55,650,14000,3
-Sample Flat D,Panvel,Apartment,68,700,17000,2
-Sample Flat E,Panvel,Apartment,52,580,13000,10
-Sample Flat F,Navi Mumbai,Apartment,75,720,19000,4
-Sample Flat G,Navi Mumbai,Apartment,82,750,21000,1
-Sample Flat H,Navi Mumbai,Apartment,70,680,18000,7
-Sample Flat I,Mumbai,Apartment,120,650,32000,6
-Sample Flat J,Mumbai,Apartment,135,700,35000,3
-Sample Flat K,Mumbai,Apartment,110,600,29000,12
+property_name,location,property_type,price_lakh,area_sqft,monthly_rent,water_supply,power_cuts_per_month,internet_quality,hospital_distance_km
+Sample Flat A,Panvel,Apartment,58,620,14500,Avarage,3/month,Good,2
+Sample Flat B,Panvel,Apartment,62,600,15500,Avarage,2/month,Good,3
+Sample Flat C,Panvel,Apartment,55,650,14000,Good,3/month,Good,2.5
+Sample Flat D,Panvel,Apartment,68,700,17000,Good,3/month,Good,2
+Sample Flat E,Panvel,Apartment,52,580,13000,Good,4/month,Good,1
+Sample Flat F,Navi Mumbai,Apartment,75,720,19000,Good,2/month,Exelent,1.5
+Sample Flat G,Navi Mumbai,Apartment,82,750,21000,Good,1/month,Exelent,2
+Sample Flat H,Navi Mumbai,Apartment,70,680,18000,Avarage,2/month,Good,2
+Sample Flat I,Mumbai,Apartment,120,650,32000,Good,1/month,Exelent,3
+Sample Flat J,Mumbai,Apartment,135,700,35000,Good,1/month,Exelent,1.5
+Sample Flat K,Mumbai,Apartment,110,600,29000,Avarage,2/month,Exelent,2
