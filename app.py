@@ -701,8 +701,11 @@ st.metric(
 )
 
 st.write("Water Supply:", water)
+st.caption("Good means reliable water supply, Average means moderate supply, Poor means inadequate supply, and Unknown means information is unavailable.")
 st.write("Power Cuts per Month:", power_cuts)
+st.caption("Power Cuts: Shows the number of electricity cuts per month. Fewer power cuts generally mean a more reliable electricity supply.")
 st.write("Internet Quality:", f"{internet}/10")
+st.caption("Internet Quality: 1 means poor internet quality, 5 means moderate quality, and 10 means excellent quality. This rating is based on your input, not a live speed test.")
 
 if water == "Unknown":
     st.info(
