@@ -596,3 +596,280 @@ st.caption(
     "verified lender criteria or property-specific quotations. "
     "Actual eligibility and expenses may differ."
 )
+# ==========================================
+# SMART PROPERTY ANALYZER - NEW FEATURES
+# ==========================================
+
+import streamlit as st
+
+st.divider()
+st.header("🏡 Smart Property Risk & Opportunity Analyzer")
+
+st.write(
+    "Analyze the locality and estimate possible "
+    "property investment returns."
+)
+
+# ==========================================
+# FEATURE 1: SMART LOCALITY ANALYSIS
+# ==========================================
+
+st.subheader("📍 1. Smart Locality Analysis")
+
+st.caption(
+    "Enter the information available to you. "
+    "These inputs are not automatically verified."
+)
+
+col1, col2 = st.columns(2)
+
+with col1:
+    water = st.selectbox(
+        "Water Supply",
+        ["Good", "Average", "Poor", "Unknown"],
+        key="new_water_supply"
+    )
+
+    power_cuts = st.number_input(
+        "Power Cuts per Month",
+        min_value=0,
+        max_value=100,
+        value=3,
+        key="new_power_cuts"
+    )
+
+with col2:
+    internet = st.slider(
+        "Internet Quality (1 = Poor, 10 = Excellent)",
+        min_value=1,
+        max_value=10,
+        value=7,
+        key="new_internet_quality"
+    )
+
+    hospital_distance = st.number_input(
+        "Nearest Hospital Distance (km)",
+        min_value=0.0,
+        max_value=100.0,
+        value=2.0,
+        step=0.5,
+        key="new_hospital_distance"
+    )
+
+water_scores = {
+    "Good": 100,
+    "Average": 60,
+    "Poor": 20,
+    "Unknown": None
+}
+
+# Convert available information into scores.
+water_score = water_scores[water]
+
+electricity_score = max(
+    0,
+    100 - power_cuts * 5
+)
+
+internet_score = internet * 10
+
+# Include only available water information.
+available_scores = [
+    (water_score, 0.40),
+    (electricity_score, 0.30),
+    (internet_score, 0.30)
+]
+
+available_scores = [
+    (score, weight)
+    for score, weight in available_scores
+    if score is not None
+]
+
+total_weight = sum(
+    weight for score, weight in available_scores
+)
+
+locality_score = sum(
+    score * weight
+    for score, weight in available_scores
+) / total_weight
+
+st.metric(
+    "Estimated Locality Score",
+    f"{locality_score:.1f}/100"
+)
+
+st.write("Water Supply:", water)
+st.write("Power Cuts per Month:", power_cuts)
+st.write("Internet Quality:", f"{internet}/10")
+
+if water == "Unknown":
+    st.info(
+        "Water supply information is unknown. "
+        "The score uses the other available inputs."
+    )
+
+if locality_score >= 80:
+    st.success("Good score based on the entered information.")
+elif locality_score >= 50:
+    st.warning("Moderate score based on the entered information.")
+else:
+    st.error("Low score based on the entered information.")
+
+if hospital_distance <= 2:
+    st.write("Hospital Distance:", "Within 2 km")
+else:
+    st.write("Hospital Distance:", f"{hospital_distance} km")
+
+st.caption(
+    "This is an illustrative score, not a verified "
+    "locality rating. Hospital distance is displayed "
+    "separately and is not included in the score."
+)
+
+# ==========================================
+# FEATURE 2: FUTURE INVESTMENT ANALYSIS
+# ==========================================
+
+st.divider()
+st.subheader("📈 2. Future Investment Analysis")
+
+st.write(
+    "Estimate possible future property values "
+    "using different annual growth assumptions."
+)
+
+col3, col4 = st.columns(2)
+
+with col3:
+    property_price = st.number_input(
+        "Current Property Price (₹ lakh)",
+        min_value=1.0,
+        value=50.0,
+        step=1.0,
+        key="new_property_price"
+    )
+
+    monthly_rent = st.number_input(
+        "Expected Monthly Rent (₹)",
+        min_value=0,
+        value=20000,
+        step=1000,
+        key="new_monthly_rent"
+    )
+
+with col4:
+    annual_expenses = st.number_input(
+        "Annual Maintenance and Other Costs (₹)",
+        min_value=0,
+        value=30000,
+        step=5000,
+        key="new_annual_expenses"
+    )
+
+    years = st.slider(
+        "Investment Period (Years)",
+        min_value=1,
+        max_value=10,
+        value=5,
+        key="new_investment_years"
+    )
+
+st.caption(
+    "Growth rates below are assumptions, not predictions "
+    "based on verified market data."
+)
+
+col5, col6, col7 = st.columns(3)
+
+with col5:
+    conservative_growth = st.number_input(
+        "Conservative Growth (%)",
+        min_value=-20.0,
+        max_value=30.0,
+        value=2.0,
+        step=1.0,
+        key="new_conservative_growth"
+    )
+
+with col6:
+    base_growth = st.number_input(
+        "Base Growth (%)",
+        min_value=-20.0,
+        max_value=30.0,
+        value=5.0,
+        step=1.0,
+        key="new_base_growth"
+    )
+
+with col7:
+    optimistic_growth = st.number_input(
+        "Optimistic Growth (%)",
+        min_value=-20.0,
+        max_value=30.0,
+        value=8.0,
+        step=1.0,
+        key="new_optimistic_growth"
+    )
+
+# Estimate future prices using compound growth.
+current_price_rupees = property_price * 100000
+
+scenarios = {
+    "Conservative": conservative_growth,
+    "Base": base_growth,
+    "Optimistic": optimistic_growth
+}
+
+results = []
+
+for scenario, growth in scenarios.items():
+    future_value = current_price_rupees * (
+        1 + growth / 100
+    ) ** years
+
+    results.append({
+        "Scenario": scenario,
+        "Annual Growth (%)": growth,
+        "Future Property Value (₹ lakh)": round(
+            future_value / 100000, 2
+        ),
+        "Price Change (₹ lakh)": round(
+            (future_value - current_price_rupees) / 100000,
+            2
+        )
+    })
+
+st.write(f"### Estimated Value After {years} Years")
+
+st.dataframe(
+    results,
+    use_container_width=True,
+    hide_index=True
+)
+
+# Calculate estimated net rental yield.
+annual_rent = monthly_rent * 12
+net_annual_rent = annual_rent - annual_expenses
+
+net_rental_yield = (
+    net_annual_rent / current_price_rupees
+) * 100
+
+st.metric(
+    "Estimated Net Rental Yield",
+    f"{net_rental_yield:.2f}%"
+)
+
+st.metric(
+    "Estimated Annual Rent After Expenses",
+    f"₹{net_annual_rent:,.0f}"
+)
+
+st.caption(
+    "Net rental yield here deducts only the expenses entered. "
+    "It excludes loan interest, taxes, vacancy and other "
+    "costs unless included above. Future values are estimates, "
+    "not guaranteed returns."
+)
