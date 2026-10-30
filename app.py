@@ -649,126 +649,242 @@ st.write(
     "property investment returns."
 )
 
+
 # ==========================================
-# FEATURE 1: SMART LOCALITY ANALYSIS
+# FEATURE 1: AUTOMATIC SMART LOCALITY ANALYSIS
 # ==========================================
 
 st.subheader("📍 1. Smart Locality Analysis")
 
 st.caption(
-    "Enter the information available to you. "
-    "These inputs are not automatically verified."
+    f"Locality information is automatically calculated "
+    f"from your CSV dataset for {location}."
 )
 
-col1, col2 = st.columns(2)
+# Get only properties from the selected location
+locality_data = properties[
+    properties["location"].astype(str).str.strip() == location
+].copy()
 
-with col1:
-    water = st.selectbox(
+if locality_data.empty:
+
+    st.warning(
+        f"No locality data is available for {location}. "
+        "Please add records for this location in your CSV."
+    )
+
+else:
+
+    # --------------------------------------
+    # Clean and process CSV values
+    # --------------------------------------
+
+    # Fix spelling variations
+    locality_data["water_supply"] = (
+        locality_data["water_supply"]
+        .astype(str)
+        .str.strip()
+        .str.lower()
+        .replace({
+            "avarage": "Average",
+            "average": "Average",
+            "good": "Good",
+            "poor": "Poor",
+            "unknown": "Unknown"
+        })
+    )
+
+    # Extract number from values like 3/month
+    power_values = pd.to_numeric(
+        locality_data["power_cuts_per_month"]
+        .astype(str)
+        .str.extract(r"(\d+(?:\.\d+)?)")[0],
+        errors="coerce"
+    )
+
+    # Convert internet quality into numerical scores
+    internet_mapping = {
+        "poor": 3,
+        "average": 6,
+        "good": 8,
+        "excellent": 10,
+        "exelent": 10
+    }
+
+    internet_values = (
+        locality_data["internet_quality"]
+        .astype(str)
+        .str.strip()
+        .str.lower()
+        .map(internet_mapping)
+    )
+
+    # --------------------------------------
+    # Calculate locality statistics
+    # --------------------------------------
+
+    water_mode = locality_data["water_supply"].mode()
+
+    water = (
+        water_mode.iloc[0]
+        if not water_mode.empty else "Unknown"
+    )
+
+    avg_power_cuts = power_values.mean()
+
+    avg_internet = internet_values.mean()
+
+    avg_hospital_distance = (
+        pd.to_numeric(
+            locality_data["hospital_distance_km"],
+            errors="coerce"
+        ).mean()
+    )
+
+    # --------------------------------------
+    # Calculate locality score
+    # --------------------------------------
+
+    water_scores = {
+        "Good": 100,
+        "Average": 60,
+        "Poor": 20,
+        "Unknown": None
+    }
+
+    water_score = water_scores.get(water)
+
+    electricity_score = (
+        max(0, 100 - avg_power_cuts * 5)
+        if pd.notna(avg_power_cuts) else None
+    )
+
+    internet_score = (
+        avg_internet * 10
+        if pd.notna(avg_internet) else None
+    )
+
+    available_scores = [
+        (water_score, 0.40),
+        (electricity_score, 0.30),
+        (internet_score, 0.30)
+    ]
+
+    available_scores = [
+        (score, weight)
+        for score, weight in available_scores
+        if score is not None
+    ]
+
+    total_weight = sum(
+        weight for score, weight in available_scores
+    )
+
+    locality_score = (
+        sum(
+            score * weight
+            for score, weight in available_scores
+        ) / total_weight
+        if total_weight > 0 else 0
+    )
+
+    # --------------------------------------
+    # Display automatic locality dashboard
+    # --------------------------------------
+
+    st.markdown(f"### 📊 {location} Locality Dashboard")
+
+    st.caption(
+        f"Based on {len(locality_data)} property records "
+        "in your dataset."
+    )
+
+    c1, c2, c3, c4 = st.columns(4)
+
+    c1.metric(
+        "Locality Score",
+        f"{locality_score:.1f}/100"
+    )
+
+    c2.metric(
         "Water Supply",
-        ["Good", "Average", "Poor", "Unknown"],
-        key="new_water_supply"
+        water
     )
 
-    power_cuts = st.number_input(
-        "Power Cuts per Month",
-        min_value=0,
-        max_value=100,
-        value=3,
-        key="new_power_cuts"
+    c3.metric(
+        "Power Cuts / Month",
+        f"{avg_power_cuts:.1f}"
+        if pd.notna(avg_power_cuts) else "N/A"
     )
 
-with col2:
-    internet = st.slider(
-        "Internet Quality (1 = Poor, 10 = Excellent)",
-        min_value=1,
-        max_value=10,
-        value=7,
-        key="new_internet_quality"
+    c4.metric(
+        "Internet Quality",
+        f"{avg_internet:.1f}/10"
+        if pd.notna(avg_internet) else "N/A"
     )
 
-    hospital_distance = st.number_input(
-        "Nearest Hospital Distance (km)",
-        min_value=0.0,
-        max_value=100.0,
-        value=2.0,
-        step=0.5,
-        key="new_hospital_distance"
+    st.divider()
+
+    c5, c6 = st.columns(2)
+
+    c5.metric(
+        "Average Hospital Distance",
+        f"{avg_hospital_distance:.2f} km"
+        if pd.notna(avg_hospital_distance) else "N/A"
     )
 
-water_scores = {
-    "Good": 100,
-    "Average": 60,
-    "Poor": 20,
-    "Unknown": None
-}
-
-# Convert available information into scores.
-water_score = water_scores[water]
-
-electricity_score = max(
-    0,
-    100 - power_cuts * 5
-)
-
-internet_score = internet * 10
-
-# Include only available water information.
-available_scores = [
-    (water_score, 0.40),
-    (electricity_score, 0.30),
-    (internet_score, 0.30)
-]
-
-available_scores = [
-    (score, weight)
-    for score, weight in available_scores
-    if score is not None
-]
-
-total_weight = sum(
-    weight for score, weight in available_scores
-)
-
-locality_score = sum(
-    score * weight
-    for score, weight in available_scores
-) / total_weight
-
-st.metric(
-    "Estimated Locality Score",
-    f"{locality_score:.1f}/100"
-)
-
-st.write("Water Supply:", water)
-st.caption("Good means reliable water supply, Average means moderate supply, Poor means inadequate supply, and Unknown means information is unavailable.")
-st.write("Power Cuts per Month:", power_cuts)
-st.caption("Power Cuts: Shows the number of electricity cuts per month. Fewer power cuts generally mean a more reliable electricity supply.")
-st.write("Internet Quality:", f"{internet}/10")
-st.caption("Internet Quality: 1 means poor internet quality, 5 means moderate quality, and 10 means excellent quality. This rating is based on your input, not a live speed test.")
-
-if water == "Unknown":
-    st.info(
-        "Water supply information is unknown. "
-        "The score uses the other available inputs."
+    c6.metric(
+        "Properties Analysed",
+        len(locality_data)
     )
 
-if locality_score >= 80:
-    st.success("Good score based on the entered information.")
-elif locality_score >= 50:
-    st.warning("Moderate score based on the entered information.")
-else:
-    st.error("Low score based on the entered information.")
+    # --------------------------------------
+    # Locality recommendation
+    # --------------------------------------
 
-if hospital_distance <= 2:
-    st.write("Hospital Distance:", "Within 2 km")
-else:
-    st.write("Hospital Distance:", f"{hospital_distance} km")
+    if locality_score >= 80:
+        st.success(
+            f"{location} has a good estimated locality score."
+        )
 
-st.caption(
-    "This is an illustrative score, not a verified "
-    "locality rating. Hospital distance is displayed "
-    "separately and is not included in the score."
-)
+    elif locality_score >= 50:
+        st.warning(
+            f"{location} has a moderate estimated locality score."
+        )
+
+    else:
+        st.error(
+            f"{location} has a low estimated locality score."
+        )
+
+    # --------------------------------------
+    # Show selected location records
+    # --------------------------------------
+
+    with st.expander("View locality data from CSV"):
+
+        st.dataframe(
+            locality_data[
+                [
+                    "property_name",
+                    "location",
+                    "water_supply",
+                    "power_cuts_per_month",
+                    "internet_quality",
+                    "hospital_distance_km"
+                ]
+            ],
+            use_container_width=True,
+            hide_index=True
+        )
+
+    st.caption(
+        "Scores are illustrative calculations based on your "
+        "CSV records, not verified live locality information. "
+        "Hospital distance is displayed separately and is not "
+        "included in the locality score."
+    )
+
 
 # ==========================================
 # FEATURE 2: FUTURE INVESTMENT ANALYSIS
