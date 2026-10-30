@@ -15,88 +15,127 @@ st.set_page_config(
     page_icon="🏡",
     layout="wide"
 )
+
 st.markdown("""
 <style>
-    .stApp {
-        background: #f4f7fb;
-        color: #17243a;
-    }
 
-    [data-testid="stSidebar"] {
-        background: #101d35;
-    }
+/* Main application */
+.stApp {
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
 
-    [data-testid="stSidebar"] * {
-        color: #f5f7fb;
-    }
+/* Main headings */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--text-color) !important;
+    font-weight: 700;
+}
 
-    .block-container {
-        max-width: 1440px;
-        padding-top: 2rem;
-        padding-bottom: 3rem;
-    }
+/* Normal text and labels */
+p, label, span, li {
+    color: var(--text-color);
+}
 
-    h1 {
-        color: #142747;
-        font-weight: 800;
-        letter-spacing: -1px;
-    }
+/* Sidebar */
+[data-testid="stSidebar"] {
+    background-color: var(--secondary-background-color);
+}
 
-    h2, h3 {
-        color: #203a60;
-        font-weight: 700;
-    }
+[data-testid="stSidebar"] * {
+    color: var(--text-color);
+}
 
-    [data-testid="stMetric"] {
-        background: white;
-        border: 1px solid #e3eaf3;
-        padding: 22px 20px;
-        border-radius: 14px;
-        box-shadow: 0 4px 16px rgba(24, 45, 75, 0.05);
-    }
+/* Input fields */
+.stTextInput input,
+.stNumberInput input,
+.stTextArea textarea {
+    background-color: var(--secondary-background-color);
+    color: var(--text-color) !important;
+    border: 1px solid var(--text-color);
+}
 
-    [data-testid="stMetricLabel"] {
-        color: #64748b;
-        font-weight: 600;
-    }
+/* Selectbox */
+[data-baseweb="select"] > div {
+    background-color: var(--secondary-background-color);
+    color: var(--text-color);
+}
 
-    [data-testid="stMetricValue"] {
-        color: #163b70;
-        font-weight: 800;
-    }
+[data-baseweb="select"] * {
+    color: var(--text-color);
+}
 
-    div[data-testid="stAlert"] {
-        border-radius: 12px;
-    }
+/* Widget labels */
+[data-testid="stWidgetLabel"],
+[data-testid="stWidgetLabel"] p {
+    color: var(--text-color) !important;
+}
 
-    div.stButton > button,
-    div.stDownloadButton > button {
-        background: #2458a6;
-        color: white;
-        border: none;
-        border-radius: 9px;
-        padding: 0.65rem 1rem;
-        font-weight: 600;
-    }
+/* Metrics */
+[data-testid="stMetric"] {
+    background-color: var(--secondary-background-color);
+    border: 1px solid rgba(128, 128, 128, 0.3);
+    padding: 20px;
+    border-radius: 14px;
+}
 
-    div.stButton > button:hover,
-    div.stDownloadButton > button:hover {
-        background: #173e79;
-        color: white;
-        border: none;
-    }
+[data-testid="stMetricLabel"],
+[data-testid="stMetricLabel"] p {
+    color: var(--text-color) !important;
+}
 
-    [data-testid="stDataFrame"] {
-        border: 1px solid #e3eaf3;
-        border-radius: 12px;
-        overflow: hidden;
-    }
+[data-testid="stMetricValue"],
+[data-testid="stMetricValue"] div {
+    color: var(--text-color) !important;
+    font-weight: 800;
+}
 
-    hr {
-        border-color: #dfe7f1;
-    }
+/* Buttons */
+.stButton > button,
+.stDownloadButton > button {
+    background-color: var(--primary-color);
+    color: white !important;
+    border: none;
+    border-radius: 9px;
+    padding: 0.65rem 1rem;
+    font-weight: 600;
+}
+
+.stButton > button:hover,
+.stDownloadButton > button:hover {
+    opacity: 0.85;
+    border: none;
+}
+
+/* Expanders and containers */
+[data-testid="stExpander"] {
+    background-color: var(--secondary-background-color);
+    border-radius: 12px;
+}
+
+/* Dataframes */
+[data-testid="stDataFrame"] {
+    border: 1px solid rgba(128, 128, 128, 0.3);
+    border-radius: 12px;
+}
+
+/* Alerts */
+[data-testid="stAlert"] {
+    border-radius: 12px;
+}
+
+/* Links */
+a {
+    color: var(--primary-color) !important;
+}
+
+/* Horizontal line */
+hr {
+    border-color: rgba(128, 128, 128, 0.3);
+}
+
 </style>
 """, unsafe_allow_html=True)
+
 BASE_DIR = Path(__file__).parent
 DATA_FILE = BASE_DIR / "data" / "properties.csv"
 
