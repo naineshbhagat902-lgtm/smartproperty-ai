@@ -15,107 +15,135 @@ st.set_page_config(
     page_icon="🏡",
     layout="wide"
 )
-
 st.markdown("""
 <style>
 
-/* Main application */
+/* ==========================================
+   SMARTPROPERTY AI - PROFESSIONAL UI THEME
+========================================== */
+
+/* Main application background */
 .stApp {
-    background-color: var(--background-color);
-    color: var(--text-color);
+    background-color: #F4F7FB;
+    color: #1E293B;
 }
 
 /* Main headings */
 h1, h2, h3, h4, h5, h6 {
-    color: var(--text-color) !important;
-    font-weight: 700;
+    color: #142B49 !important;
+    font-weight: 700 !important;
 }
 
-/* Normal text and labels */
+/* Normal text */
 p, label, span, li {
-    color: var(--text-color);
+    color: #334155;
 }
 
 /* Sidebar */
 [data-testid="stSidebar"] {
-    background-color: var(--secondary-background-color);
+    background-color: #142B49;
 }
 
 [data-testid="stSidebar"] * {
-    color: var(--text-color);
+    color: #FFFFFF !important;
+}
+
+/* Sidebar headings */
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3 {
+    color: #FFFFFF !important;
 }
 
 /* Input fields */
 .stTextInput input,
 .stNumberInput input,
 .stTextArea textarea {
-    background-color: var(--secondary-background-color);
-    color: var(--text-color) !important;
-    border: 1px solid var(--text-color);
+    background-color: #FFFFFF;
+    color: #142B49 !important;
+    border: 1px solid #CBD5E1;
+    border-radius: 8px;
 }
 
 /* Selectbox */
 [data-baseweb="select"] > div {
-    background-color: var(--secondary-background-color);
-    color: var(--text-color);
+    background-color: #FFFFFF;
+    border-radius: 8px;
 }
 
 [data-baseweb="select"] * {
-    color: var(--text-color);
+    color: #142B49 !important;
 }
 
 /* Widget labels */
 [data-testid="stWidgetLabel"],
 [data-testid="stWidgetLabel"] p {
-    color: var(--text-color) !important;
+    color: #142B49 !important;
+    font-weight: 600;
 }
 
-/* Metrics */
+/* Metric cards */
 [data-testid="stMetric"] {
-    background-color: var(--secondary-background-color);
-    border: 1px solid rgba(128, 128, 128, 0.3);
+    background-color: #FFFFFF;
+    border: 1px solid #E2E8F0;
     padding: 20px;
     border-radius: 14px;
+    box-shadow: 0 3px 12px rgba(15, 23, 42, 0.05);
 }
 
+/* Metric labels */
 [data-testid="stMetricLabel"],
 [data-testid="stMetricLabel"] p {
-    color: var(--text-color) !important;
+    color: #64748B !important;
+    font-weight: 600;
 }
 
+/* Metric values */
 [data-testid="stMetricValue"],
 [data-testid="stMetricValue"] div {
-    color: var(--text-color) !important;
+    color: #142B49 !important;
     font-weight: 800;
 }
 
 /* Buttons */
 .stButton > button,
 .stDownloadButton > button {
-    background-color: var(--primary-color);
-    color: white !important;
+    background-color: #E98235;
+    color: #FFFFFF !important;
     border: none;
     border-radius: 9px;
     padding: 0.65rem 1rem;
     font-weight: 600;
+    transition: 0.3s ease;
 }
 
+/* Button hover effect */
 .stButton > button:hover,
 .stDownloadButton > button:hover {
-    opacity: 0.85;
+    background-color: #D96D20;
+    color: #FFFFFF !important;
     border: none;
 }
 
-/* Expanders and containers */
+/* Expanders */
 [data-testid="stExpander"] {
-    background-color: var(--secondary-background-color);
+    background-color: #FFFFFF;
+    border: 1px solid #E2E8F0;
     border-radius: 12px;
+}
+
+/* Containers */
+[data-testid="stVerticalBlockBorderWrapper"] {
+    background-color: #FFFFFF;
+    border-radius: 14px;
+    border-color: #E2E8F0;
 }
 
 /* Dataframes */
 [data-testid="stDataFrame"] {
-    border: 1px solid rgba(128, 128, 128, 0.3);
+    border: 1px solid #E2E8F0;
     border-radius: 12px;
+    background-color: #FFFFFF;
 }
 
 /* Alerts */
@@ -125,12 +153,62 @@ p, label, span, li {
 
 /* Links */
 a {
-    color: var(--primary-color) !important;
+    color: #E98235 !important;
+    font-weight: 600;
 }
 
-/* Horizontal line */
+/* Horizontal divider */
 hr {
-    border-color: rgba(128, 128, 128, 0.3);
+    border-color: #E2E8F0;
+}
+
+/* Dashboard hero section */
+.dashboard-hero {
+    background: linear-gradient(
+        120deg,
+        #142B49,
+        #234B75
+    );
+    padding: 35px;
+    border-radius: 18px;
+    margin-bottom: 20px;
+    box-shadow: 0 5px 18px rgba(20, 43, 73, 0.15);
+}
+
+.dashboard-hero h1 {
+    color: #FFFFFF !important;
+    font-size: 36px;
+    margin-bottom: 8px;
+}
+
+.dashboard-hero p {
+    color: #E2E8F0 !important;
+    font-size: 16px;
+}
+
+/* Property card price */
+.property-price {
+    color: #E98235;
+    font-size: 25px;
+    font-weight: 800;
+    margin-bottom: 12px;
+}
+
+/* Smooth page appearance */
+.block-container {
+    padding-top: 2rem;
+    padding-bottom: 3rem;
+}
+
+/* Responsive headings */
+@media (max-width: 768px) {
+    .dashboard-hero {
+        padding: 22px;
+    }
+
+    .dashboard-hero h1 {
+        font-size: 27px;
+    }
 }
 
 </style>
