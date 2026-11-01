@@ -428,213 +428,582 @@ st.caption(
     "Note: This opens Google Maps in a new page. "
     "Nearby places and distances should be verified independently."
 )
-# Home Affordability and True Cost Calculator
-st.divider()
-st.header("🏠 Home Affordability & True Cost Calculator")
 
-st.warning(
-    "ESTIMATES ONLY: This calculator uses your inputs and "
-    "illustrative assumptions. It does not provide verified bank "
-    "offers, legal charges, or financial advice."
+# =====================================================
+# HOME AFFORDABILITY & TRUE COST CALCULATOR
+# PROFESSIONAL DASHBOARD VERSION
+# =====================================================
+
+st.divider()
+st.header("🏡 Home Affordability & Loan Calculator")
+
+st.write(
+    "Plan your home purchase by understanding your income, "
+    "savings, loan EMI and additional property expenses."
 )
 
-st.subheader("1. Check Your Home Budget")
+st.info(
+    "Educational estimates only. Actual home-loan eligibility, "
+    "interest rates and purchase charges depend on the lender "
+    "and applicable local rules."
+)
+
+# =====================================================
+# 1. SELECTED PROPERTY INFORMATION FROM YOUR PROJECT
+# =====================================================
+
+st.subheader("🏠 1. Selected Property Overview")
+
+property_data = properties[
+    (properties["location"].astype(str).str.strip() == str(location).strip()) &
+    (properties["property_type"].astype(str).str.strip() == str(property_type).strip())
+].copy()
+
+p1, p2, p3, p4 = st.columns(4)
+
+p1.metric("Selected Location", location)
+p2.metric("Property Type", property_type)
+p3.metric("Asking Price", f"₹{price_lakh:,.2f} L")
+p4.metric("Property Area", f"{area:,.0f} sq. ft.")
+
+# Compare with actual CSV records
+if not property_data.empty:
+
+    average_price = property_data["price_lakh"].median()
+    average_rent = property_data["monthly_rent"].median()
+    average_area = property_data["area_sqft"].median()
+
+    st.markdown("#### 📊 Dataset Comparison")
+
+    d1, d2, d3 = st.columns(3)
+
+    d1.metric(
+        "Sample Median Property Price",
+        f"₹{average_price:,.2f} L"
+    )
+
+    d2.metric(
+        "Sample Median Monthly Rent",
+        f"₹{average_rent:,.0f}"
+    )
+
+    d3.metric(
+        "Sample Median Property Area",
+        f"{average_area:,.0f} sq. ft."
+    )
+
+    st.caption(
+        f"Comparison uses {len(property_data)} matching records "
+        f"from your CSV for {location} and {property_type}."
+    )
+
+else:
+    average_price = None
+    average_rent = None
+
+    st.warning(
+        "No matching property records are available "
+        "for this location and property type."
+    )
+
+# =====================================================
+# 2. YOUR FINANCIAL PROFILE
+# =====================================================
+
+st.divider()
+st.subheader("💰 2. Your Financial Profile")
+
 st.caption(
-    "Estimate how much home you may be able to afford "
-    "based on your income, savings and existing loan payments."
+    "Enter your household income, current loan payments "
+    "and savings to estimate your home-buying capacity."
 )
 
 col1, col2 = st.columns(2)
 
 with col1:
+
     monthly_income = st.number_input(
-        "Monthly household income (₹)",
+        "Monthly Household Income (₹)",
         min_value=0,
         value=80000,
         step=5000,
         key="aff_income",
-        help="Total money earned by everyone in your household each month."
+        help="Total monthly income earned by all household members."
     )
-    st.caption("Example: ₹80,000 means your household earns ₹80,000 per month.")
 
     existing_emi = st.number_input(
-        "Existing monthly loan payments (₹)",
+        "Existing Monthly Loan EMIs (₹)",
         min_value=0,
         value=5000,
         step=1000,
         key="aff_existing_emi",
-        help="Payments you already make each month for other loans."
+        help="Monthly payments for your existing loans."
     )
-    st.caption("Example: ₹5,000 means you already pay ₹5,000 each month toward other loans.")
+
+with col2:
 
     savings = st.number_input(
-        "Savings available for buying a home (₹)",
+        "Available Home-Buying Savings (₹)",
         min_value=0,
         value=1000000,
         step=50000,
         key="aff_savings",
-        help="Money available for your down payment and extra buying costs."
+        help="Savings available for your down payment and purchase costs."
     )
-    st.caption("Example: ₹10,00,000 means ten lakh rupees saved for the purchase.")
-with col2:
+
+    monthly_maintenance = st.number_input(
+        "Estimated Monthly Property Maintenance (₹)",
+        min_value=0,
+        value=3000,
+        step=500,
+        key="aff_maintenance",
+        help="Estimated monthly society maintenance and property upkeep."
+    )
+
+# =====================================================
+# 3. HOME LOAN CONFIGURATION
+# =====================================================
+
+st.divider()
+st.subheader("🏦 3. Home Loan Configuration")
+
+st.caption(
+    "Choose your down payment, annual interest rate "
+    "and repayment period."
+)
+
+col3, col4, col5 = st.columns(3)
+
+with col3:
+
     down_payment_percent = st.slider(
-        "Down payment (%)",
+        "Down Payment (%)",
         min_value=10,
         max_value=50,
         value=20,
         key="aff_down_payment",
+        help="Percentage of property price paid using your own money."
     )
+
+with col4:
+
     interest_rate = st.number_input(
-        "Annual home-loan interest rate (%)",
+        "Annual Home Loan Interest Rate (%)",
         min_value=1.0,
         max_value=20.0,
         value=8.5,
         step=0.25,
         key="aff_interest",
+        help="Assumed yearly interest rate on your home loan."
     )
+
+with col5:
+
     loan_years = st.slider(
-        "Loan tenure (years)",
+        "Loan Tenure (Years)",
         min_value=5,
         max_value=30,
         value=20,
         key="aff_tenure",
+        help="Number of years taken to repay the loan."
     )
 
-st.subheader("2. Extra Home Costs")
+# =====================================================
+# 4. ADDITIONAL PROPERTY PURCHASE COSTS
+# =====================================================
+
+st.divider()
+st.subheader("🧾 4. Additional Property Purchase Costs")
+
 st.caption(
-    "Estimate how much extra money you may need for "
-    "stamp duty, registration and other buying expenses, "
-    "along with your monthly maintenance costs."
+    "Estimate additional expenses such as stamp duty, "
+    "registration and other purchase-related charges."
 )
 
-col3, col4 = st.columns(2)
-
-with col3:
-    purchase_cost_percent = st.number_input(
-        "Extra buying costs (% of home price)",
-        min_value=0.0,
-        max_value=20.0,
-        value=7.0,
-        step=0.5,
-        key="aff_purchase_costs",
-        help=(
-            "An estimate for stamp duty, property registration "
-            "and other purchase-related expenses. Actual charges "
-            "vary by location."
-        ),
-    )
-    st.caption(
-        "Example: 7% means about ₹70,000 in extra costs "
-        "for a ₹10 lakh property."
-    )
-
-with col4:
-    monthly_maintenance = st.number_input(
-        "Monthly property maintenance (₹)",
-        min_value=0,
-        value=3000,
-        step=500,
-        key="aff_maintenance",
-        help=(
-            "Estimated recurring costs such as housing society "
-            "maintenance. Actual costs may differ."
-        ),
-    )
-    st.caption(
-        "Example: ₹3,000 means an estimated maintenance "
-        "payment of ₹3,000 each month."
-    )
-
-# Estimate an affordable monthly loan payment.
-available_monthly = max(
-    0,
-    monthly_income * 0.35 - existing_emi - monthly_maintenance
+purchase_cost_percent = st.number_input(
+    "Estimated Additional Buying Costs (% of Property Price)",
+    min_value=0.0,
+    max_value=20.0,
+    value=7.0,
+    step=0.5,
+    key="aff_purchase_costs",
+    help="Estimated percentage for registration, stamp duty and other expenses."
 )
+
+st.caption(
+    "This is an assumption. Actual government charges and "
+    "other expenses may vary by location and property."
+)
+
+# =====================================================
+# 5. FINANCIAL CALCULATIONS
+# =====================================================
 
 monthly_rate = interest_rate / 1200
 number_of_payments = loan_years * 12
 
 if monthly_rate > 0:
+
     emi_factor = (
         monthly_rate * (1 + monthly_rate) ** number_of_payments
         / ((1 + monthly_rate) ** number_of_payments - 1)
     )
+
 else:
+
     emi_factor = 1 / number_of_payments
 
+# Assumed 35% monthly income limit
+assumed_income_limit = monthly_income * 0.35
+
+available_monthly_emi = max(
+    0,
+    assumed_income_limit - existing_emi - monthly_maintenance
+)
+
 affordable_loan = (
-    available_monthly / emi_factor
+    available_monthly_emi / emi_factor
     if emi_factor > 0 else 0
 )
 
 down_fraction = down_payment_percent / 100
 cost_fraction = purchase_cost_percent / 100
 
-# Estimate a budget considering both income and available savings.
-cash_budget = savings / (
-    down_fraction + cost_fraction
-) if down_fraction + cost_fraction > 0 else 0
-
+# Income-based property budget
 income_budget = (
     affordable_loan / (1 - down_fraction)
     if down_fraction < 1 else 0
 )
 
-estimated_home_budget = min(cash_budget, income_budget)
+# Savings-based property budget
+cash_budget = (
+    savings / (down_fraction + cost_fraction)
+    if down_fraction + cost_fraction > 0 else 0
+)
+
+# Final estimated maximum budget
+estimated_home_budget = min(income_budget, cash_budget)
 
 estimated_down_payment = estimated_home_budget * down_fraction
 estimated_extra_costs = estimated_home_budget * cost_fraction
-estimated_loan = estimated_home_budget - estimated_down_payment
+
+estimated_loan = max(
+    0,
+    estimated_home_budget - estimated_down_payment
+)
 
 estimated_emi = estimated_loan * emi_factor
+
 estimated_monthly_total = (
     estimated_emi + monthly_maintenance + existing_emi
 )
 
+total_interest = (
+    estimated_emi * number_of_payments - estimated_loan
+)
+
+total_loan_repayment = estimated_emi * number_of_payments
+
+initial_cash_required = (
+    estimated_down_payment + estimated_extra_costs
+)
+
+remaining_savings = savings - initial_cash_required
+
+# =====================================================
+# 6. AFFORDABILITY RESULTS
+# =====================================================
+
 st.divider()
-st.subheader("3. Your Results")
+st.subheader("📊 5. Your Home Affordability Results")
+
 st.caption(
-    "See your estimated home budget, down payment, "
-    "home loan amount, monthly EMI and total monthly expenses "
-    "to help you plan your home purchase."
+    "These results estimate the home price you may afford "
+    "based on your financial inputs and selected loan settings."
 )
 
 r1, r2, r3 = st.columns(3)
 
 r1.metric(
-    "Estimated home budget",
-    f"₹{estimated_home_budget:,.0f}",
+    "Maximum Estimated Home Budget",
+    f"₹{estimated_home_budget / 100000:.2f} L"
 )
+
 r2.metric(
-    "Estimated loan amount",
-    f"₹{estimated_loan:,.0f}",
+    "Estimated Home Loan Amount",
+    f"₹{estimated_loan / 100000:.2f} L"
 )
+
 r3.metric(
-    "Estimated monthly loan EMI",
-    f"₹{estimated_emi:,.0f}",
+    "Estimated Monthly EMI",
+    f"₹{estimated_emi:,.0f}"
 )
 
 r4, r5, r6 = st.columns(3)
 
 r4.metric(
-    "Estimated down payment",
-    f"₹{estimated_down_payment:,.0f}",
+    "Required Down Payment",
+    f"₹{estimated_down_payment:,.0f}"
 )
+
 r5.metric(
-    "Estimated buying costs",
-    f"₹{estimated_extra_costs:,.0f}",
+    "Estimated Buying Expenses",
+    f"₹{estimated_extra_costs:,.0f}"
 )
+
 r6.metric(
-    "Monthly outgo including existing EMIs",
-    f"₹{estimated_monthly_total:,.0f}",
+    "Total Initial Cash Required",
+    f"₹{initial_cash_required:,.0f}"
+)
+
+# =====================================================
+# 7. SELECTED PROPERTY AFFORDABILITY CHECK
+# =====================================================
+
+st.divider()
+st.subheader("🔍 6. Can You Afford This Selected Property?")
+
+selected_price = price_lakh * 100000
+
+selected_down_payment = selected_price * down_fraction
+selected_extra_cost = selected_price * cost_fraction
+
+selected_loan = selected_price - selected_down_payment
+
+selected_emi = selected_loan * emi_factor
+
+selected_initial_cash = (
+    selected_down_payment + selected_extra_cost
+)
+
+selected_monthly_outgo = (
+    selected_emi + monthly_maintenance + existing_emi
+)
+
+selected_income_ratio = (
+    selected_monthly_outgo / monthly_income * 100
+    if monthly_income > 0 else 0
+)
+
+cash_shortfall = max(0, selected_initial_cash - savings)
+
+budget_difference = estimated_home_budget - selected_price
+
+a1, a2, a3 = st.columns(3)
+
+a1.metric(
+    "Selected Property Price",
+    f"₹{selected_price / 100000:.2f} L"
+)
+
+a2.metric(
+    "Estimated EMI for This Property",
+    f"₹{selected_emi:,.0f}"
+)
+
+a3.metric(
+    "Initial Cash Required",
+    f"₹{selected_initial_cash:,.0f}"
+)
+
+if selected_price <= estimated_home_budget and cash_shortfall == 0:
+
+    st.success(
+        "The selected property is within your estimated "
+        "income-based budget and available savings."
+    )
+
+elif selected_price > estimated_home_budget:
+
+    st.warning(
+        f"The selected property is approximately "
+        f"₹{abs(budget_difference) / 100000:.2f} lakh "
+        "above your estimated affordable budget."
+    )
+
+else:
+
+    st.warning(
+        f"You need approximately ₹{cash_shortfall:,.0f} "
+        "more savings for the estimated initial payment."
+    )
+
+st.metric(
+    "Monthly Housing Outgo as % of Income",
+    f"{selected_income_ratio:.1f}%"
+)
+
+# =====================================================
+# 8. LOAN REPAYMENT SUMMARY
+# =====================================================
+
+st.divider()
+st.subheader("📈 7. Loan Repayment Summary")
+
+loan1, loan2, loan3 = st.columns(3)
+
+loan1.metric(
+    "Total Loan Repayment",
+    f"₹{total_loan_repayment:,.0f}"
+)
+
+loan2.metric(
+    "Total Estimated Interest",
+    f"₹{total_interest:,.0f}"
+)
+
+loan3.metric(
+    "Loan Duration",
+    f"{loan_years} Years"
 )
 
 st.caption(
-    "Illustrative calculation only. The 35% income allowance, "
-    "interest rate, costs and maintenance are assumptions, not "
-    "verified lender criteria or property-specific quotations. "
-    "Actual eligibility and expenses may differ."
+    "Total repayment includes the estimated principal "
+    "and interest across the selected loan tenure."
 )
+
+# =====================================================
+# 9. VISUAL FINANCIAL ANALYSIS
+# =====================================================
+
+st.divider()
+st.subheader("📊 8. Visual Financial Analysis")
+
+chart1, chart2 = st.columns(2)
+
+with chart1:
+
+    st.markdown("#### Loan Principal vs Interest")
+
+    fig1, ax1 = plt.subplots()
+
+    ax1.pie(
+        [estimated_loan, max(0, total_interest)],
+        labels=["Loan Principal", "Interest"],
+        autopct="%1.1f%%",
+        startangle=90
+    )
+
+    ax1.axis("equal")
+    st.pyplot(fig1)
+    plt.close(fig1)
+
+with chart2:
+
+    st.markdown("#### Monthly Expense Breakdown")
+
+    expense_data = pd.Series({
+        "New Home EMI": estimated_emi,
+        "Existing EMIs": existing_emi,
+        "Maintenance": monthly_maintenance
+    })
+
+    fig2, ax2 = plt.subplots()
+
+    expense_data.plot(
+        kind="bar",
+        ax=ax2
+    )
+
+    ax2.set_ylabel("Amount (₹)")
+    ax2.set_xlabel("Monthly Expenses")
+    ax2.tick_params(axis="x", rotation=15)
+
+    fig2.tight_layout()
+    st.pyplot(fig2)
+    plt.close(fig2)
+
+# =====================================================
+# 10. FINANCIAL RECOMMENDATION
+# =====================================================
+
+st.divider()
+st.subheader("💡 9. Financial Recommendation")
+
+if monthly_income == 0:
+
+    st.warning(
+        "Enter your monthly household income "
+        "to calculate your affordability."
+    )
+
+elif estimated_home_budget <= 0:
+
+    st.warning(
+        "Your current income or savings may not be "
+        "sufficient for the selected loan assumptions. "
+        "Review your financial inputs."
+    )
+
+else:
+
+    if selected_price <= estimated_home_budget and cash_shortfall == 0:
+
+        st.success(
+            "Your selected property fits within the "
+            "calculator's estimated budget and savings limit."
+        )
+
+    else:
+
+        st.info(
+            "Consider a lower-priced property, a larger "
+            "down payment or additional savings."
+        )
+
+st.write("### Understanding Your Results")
+
+st.markdown(
+    """
+    - **Home Budget:** Estimated maximum property price.
+    - **Down Payment:** Your contribution towards the property.
+    - **Loan Amount:** Estimated amount borrowed from a lender.
+    - **EMI:** Monthly principal and interest repayment.
+    - **Buying Expenses:** Estimated additional purchase costs.
+    - **Total Monthly Outgo:** New EMI, existing EMIs and maintenance.
+    """
+)
+
+# =====================================================
+# 11. DOWNLOAD FINANCIAL REPORT
+# =====================================================
+
+st.divider()
+st.subheader("📥 10. Download Your Financial Report")
+
+financial_report = pd.DataFrame([{
+    "Location": location,
+    "Property Type": property_type,
+    "Property Price (₹)": selected_price,
+    "Monthly Income (₹)": monthly_income,
+    "Existing EMIs (₹)": existing_emi,
+    "Available Savings (₹)": savings,
+    "Down Payment (%)": down_payment_percent,
+    "Interest Rate (%)": interest_rate,
+    "Loan Tenure (Years)": loan_years,
+    "Estimated Home Budget (₹)": estimated_home_budget,
+    "Estimated Loan (₹)": estimated_loan,
+    "Estimated Monthly EMI (₹)": estimated_emi,
+    "Estimated Buying Costs (₹)": estimated_extra_costs,
+    "Initial Cash Required (₹)": selected_initial_cash,
+    "Total Monthly Outgo (₹)": selected_monthly_outgo,
+    "Estimated Total Interest (₹)": total_interest
+}])
+
+st.download_button(
+    "📄 Download Home Affordability Report (CSV)",
+    data=financial_report.to_csv(index=False).encode("utf-8"),
+    file_name="home_affordability_report.csv",
+    mime="text/csv",
+    use_container_width=True
+)
+
+st.caption(
+    "All figures are estimates based on user inputs and "
+    "illustrative assumptions. This tool is not a bank approval, "
+    "loan offer, property valuation or financial advice."
+)
+
 # ==========================================
 # SMART PROPERTY ANALYZER - NEW FEATURES
 # ==========================================
