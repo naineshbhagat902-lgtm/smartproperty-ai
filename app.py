@@ -349,17 +349,226 @@ difference_percent = (
     if predicted_lakh > 0 else 0
 )
 
-# Dashboard metrics
-st.markdown("## 📊 Property dashboard")
+# ==========================================
+# PROFESSIONAL SMARTPROPERTY AI DASHBOARD
+# ==========================================
+
+# Dashboard heading
+st.markdown("## 🏡 SmartProperty Dashboard")
+
+st.caption(
+    "Your intelligent real estate dashboard powered by "
+    "machine learning and property data analytics."
+)
+
+# ==========================================
+# 1. MAIN PROPERTY KPI CARDS
+# ==========================================
+
+st.markdown("### 📊 Property Overview")
 
 m1, m2, m3, m4 = st.columns(4)
-m1.metric("Asking price", f"₹{price_lakh:,.1f} lakh")
-m2.metric("ML price estimate", f"₹{predicted_lakh:,.1f} lakh")
-m3.metric("Price per sq. ft.", f"₹{price_per_sqft:,.0f}")
-m4.metric("Gross rental yield", f"{gross_yield:.2f}%")
+
+m1.metric(
+    "🏠 Asking Price",
+    f"₹{price_lakh:,.1f} L"
+)
+
+m2.metric(
+    "🤖 AI Estimated Value",
+    f"₹{predicted_lakh:,.1f} L"
+)
+
+m3.metric(
+    "📐 Price / Sq. Ft.",
+    f"₹{price_per_sqft:,.0f}"
+)
+
+m4.metric(
+    "💰 Rental Yield",
+    f"{gross_yield:.2f}%"
+)
 
 st.divider()
 
+# ==========================================
+# 2. FEATURED PROPERTY CARDS
+# ==========================================
+
+st.markdown("### 🏘️ Featured Properties")
+
+st.caption(
+    "Explore properties available in your existing CSV dataset."
+)
+
+featured_properties = properties.head(6)
+
+property_columns = st.columns(3)
+
+for index, (_, prop) in enumerate(
+    featured_properties.iterrows()
+):
+
+    with property_columns[index % 3]:
+
+        with st.container(border=True):
+
+            st.markdown(
+                f"#### 🏠 {prop['property_name']}"
+            )
+
+            st.markdown(
+                f"""
+                <div class="property-price">
+                    ₹{float(prop['price_lakh']):,.2f} L
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+            st.write(
+                "📍 **Location:**",
+                prop["location"]
+            )
+
+            st.write(
+                "🏢 **Type:**",
+                prop["property_type"]
+            )
+
+            st.write(
+                "📐 **Area:**",
+                f"{float(prop['area_sqft']):,.0f} sq. ft."
+            )
+
+            st.write(
+                "💵 **Monthly Rent:**",
+                f"₹{float(prop['monthly_rent']):,.0f}"
+            )
+
+            st.write(
+                "🏗️ **Building Age:**",
+                f"{float(prop['building_age']):.0f} years"
+            )
+
+st.divider()
+
+# ==========================================
+# 3. AI PROPERTY ANALYTICS
+# ==========================================
+
+st.markdown("### 🤖 AI Property Analytics")
+
+ai_col1, ai_col2 = st.columns(2)
+
+# AI valuation insight
+with ai_col1:
+
+    st.markdown("#### 📈 AI Price Analysis")
+
+    st.metric(
+        "AI Estimated Property Value",
+        f"₹{predicted_lakh:,.2f} L"
+    )
+
+    st.write(
+        f"Your asking price is ₹{price_lakh:,.2f} lakh."
+    )
+
+    if difference > 0:
+
+        st.warning(
+            f"Your asking price is "
+            f"{difference_percent:.1f}% above the "
+            "AI estimated value."
+        )
+
+    elif difference < 0:
+
+        st.success(
+            f"Your asking price is "
+            f"{abs(difference_percent):.1f}% below the "
+            "AI estimated value."
+        )
+
+    else:
+
+        st.info(
+            "Your asking price matches the AI estimated value."
+        )
+
+# Investment insights
+with ai_col2:
+
+    st.markdown("#### 💡 Investment Snapshot")
+
+    st.metric(
+        "Annual Rental Income",
+        f"₹{annual_rent:,.0f}"
+    )
+
+    st.metric(
+        "Monthly Rental Income",
+        f"₹{monthly_rent:,.0f}"
+    )
+
+    st.metric(
+        "Gross Rental Yield",
+        f"{gross_yield:.2f}%"
+    )
+
+    st.metric(
+        "Price per Sq. Ft.",
+        f"₹{price_per_sqft:,.0f}"
+    )
+
+st.divider()
+
+# ==========================================
+# 4. AI RECOMMENDATION
+# ==========================================
+
+st.markdown("### 🧠 Smart AI Recommendation")
+
+if predicted_lakh > 0:
+
+    if abs(difference_percent) <= 10:
+
+        st.success(
+            "The asking price is within 10% of the "
+            "machine learning estimate. Compare similar "
+            "properties before making a decision."
+        )
+
+    elif difference > 0:
+
+        st.warning(
+            "The asking price is higher than the AI estimate. "
+            "Consider checking comparable properties and "
+            "negotiating the price."
+        )
+
+    else:
+
+        st.success(
+            "The asking price is below the AI estimate. "
+            "Check the property's condition, documents and "
+            "location before making a decision."
+        )
+
+else:
+
+    st.info(
+        "The AI valuation is unavailable for this property."
+    )
+
+st.caption(
+    "AI insights are based on your sample CSV dataset and "
+    "Random Forest model. They are estimates, not verified "
+    "market valuations or investment advice."
+)
+
+st.divider()
 # Prediction explanation
 st.markdown("## 🤖 AI price analysis")
 
