@@ -412,11 +412,10 @@ for index, (_, prop) in enumerate(
     with property_columns[index % 3]:
 
         with st.container(border=True):
-                        image_path = prop.get("image_path", "")
+            image_path = prop.get("image_path", "")
 
             if pd.notna(image_path) and Path(str(image_path)).is_file():
                 st.image(image_path, use_container_width=True)
-
             st.markdown(
                 f"#### 🏠 {prop['property_name']}"
             )
