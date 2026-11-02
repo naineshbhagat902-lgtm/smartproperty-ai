@@ -307,9 +307,9 @@ with st.sidebar:
     st.header("🏠 Property details")
 
     location = st.selectbox(
-        "Location",
-        sorted(properties["location"].unique())
-    )
+    "City",
+    sorted(properties["city"].unique())
+)
 
     property_type = st.selectbox(
         "Property type",
@@ -359,9 +359,7 @@ price_per_sqft = price_rupees / area
 annual_rent = monthly_rent * 12
 gross_yield = annual_rent / price_rupees * 100
 
-selected_city = properties.loc[
-    properties["location"] == location, "city"
-].iloc[0]
+selected_city = location
 
 input_data = pd.DataFrame([{
     "city": selected_city,
@@ -431,8 +429,7 @@ st.caption(
 )
 
 featured_properties = properties[
-    properties["location"].astype(str).str.strip()
-    == str(location).strip()
+    properties["city"] == location
 ].head(6)
 
 property_columns = st.columns(3)
@@ -651,8 +648,7 @@ st.markdown("## 🏘️ Comparable properties")
 comparison = properties.copy()
 
 if compare_location:
-    comparison = comparison[comparison["location"] == location]
-
+    comparison = comparison[comparison["city"] == location]
 comparison["price_per_sqft"] = (
     comparison["price_lakh"] * 100000 / comparison["area_sqft"]
 )
@@ -777,7 +773,7 @@ st.info(
 st.subheader("🏠 1. Selected Property Overview")
 
 property_data = properties[
-    (properties["location"].astype(str).str.strip() == str(location).strip()) &
+    (properties["city"] == location) &
     (properties["property_type"].astype(str).str.strip() == str(property_type).strip())
 ].copy()
 
@@ -1354,7 +1350,7 @@ st.caption(
 
 # Get only properties from the selected location
 locality_data = properties[
-    properties["location"].astype(str).str.strip() == location
+    properties["city"] == location
 ].copy()
 
 if locality_data.empty:
