@@ -476,71 +476,123 @@ m4.metric(
 
 st.divider()
 
-# ==========================================
-# 2. FEATURED PROPERTY CARDS
-# ==========================================
 
 st.markdown('<div id="featured-properties"></div>', unsafe_allow_html=True)
+
+st.markdown("## Featured Properties")
+
 st.caption(
-    "Explore properties available in your existing CSV dataset."
+    "Discover selected properties from your property database."
 )
 
 featured_properties = properties[
     properties["city"] == location
 ].head(6)
 
-property_columns = st.columns(3)
+if featured_properties.empty:
+    st.info("No properties available for this location.")
 
-for index, (_, prop) in enumerate(
-    featured_properties.iterrows()
-):
+else:
+    property_columns = st.columns(3)
 
-    with property_columns[index % 3]:
+    for index, (_, prop) in enumerate(
+        featured_properties.iterrows()
+    ):
+        with property_columns[index % 3]:
 
-        with st.container(border=True):
-            image_path = prop.get("image_path", "")
+            with st.container(border=True):
 
-            if pd.notna(image_path) and Path(str(image_path)).is_file():
-                st.image(image_path, use_container_width=True)
-            st.markdown(
-                f"#### 🏠 {prop['property_name']}"
-            )
+                image_path = prop.get("image_path", "")
 
-            st.markdown(
-                f"""
-                <div class="property-price">
-                    ₹{float(prop['price_lakh']):,.2f} L
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+                if (
+                    pd.notna(image_path)
+                    and Path(str(image_path)).is_file()
+                ):
+                    st.image(
+                        str(image_path),
+                        use_container_width=True
+                    )
+                else:
+                    st.markdown(
+                        """
+                        <div style="
+                            height:190px;
+                            background:#E9E6DF;
+                            border-radius:8px;
+                            display:flex;
+                            align-items:center;
+                            justify-content:center;
+                            color:#7C8490;
+                            font-size:15px;
+                        ">
+                            Property Image Unavailable
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
 
-            st.write(
-                "📍 **Location:**",
-                prop["location"]
-            )
+                st.markdown(
+                    f"""
+                    <div style="
+                        color:#B08D57;
+                        font-size:11px;
+                        font-weight:700;
+                        letter-spacing:1.5px;
+                        margin-top:12px;
+                        text-transform:uppercase;
+                    ">
+                        {prop['property_type']}
+                    </div>
+                    <div style="
+                        color:#101827;
+                        font-size:20px;
+                        font-weight:750;
+                        margin-top:5px;
+                        line-height:1.4;
+                    ">
+                        {prop['property_name']}
+                    </div>
+                    <div style="
+                        color:#78818D;
+                        font-size:13px;
+                        margin-top:5px;
+                    ">
+                        📍 {prop['location']}
+                    </div>
+                    <div style="
+                        color:#B08D57;
+                        font-size:25px;
+                        font-weight:800;
+                        margin-top:15px;
+                        margin-bottom:12px;
+                    ">
+                        ₹{float(prop['price_lakh']):,.2f} L
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
 
-            st.write(
-                "🏢 **Type:**",
-                prop["property_type"]
-            )
+                st.divider()
 
-            st.write(
-                "📐 **Area:**",
-                f"{float(prop['area_sqft']):,.0f} sq. ft."
-            )
+                detail1, detail2 = st.columns(2)
 
-            st.write(
-                "💵 **Monthly Rent:**",
-                f"₹{float(prop['monthly_rent']):,.0f}"
-            )
+                detail1.metric(
+                    "Area",
+                    f"{float(prop['area_sqft']):,.0f} sq.ft."
+                )
 
-            st.write(
-                "🏗️ **Building Age:**",
-                f"{float(prop['building_age']):.0f} years"
-            )
+                detail2.metric(
+                    "Monthly Rent",
+                    f"₹{float(prop['monthly_rent']):,.0f}"
+                )
+
+                st.caption(
+                    f"🏗️ Building age: "
+                    f"{float(prop['building_age']):.0f} years"
+                )
 
 st.divider()
+
 
 # ==========================================
 # 3. AI PROPERTY ANALYTICS
