@@ -1,12 +1,12 @@
 property_name,location,property_type,price_lakh,area_sqft,monthly_rent,water_supply,power_cuts_per_month,internet_quality,hospital_distance_km,building_age,image_path
-Harmony Residency,Panvel,Apartment,58,620,14500,Avarage,3/month,Good,2,3,data/images/Harmony Residency.jpeg
-Elite Heights,Panvel,Apartment,62,600,15500,Avarage,2/month,Good,3,4,data/images/Elite Heights.jpeg
-Greenview Apartments,Panvel,Apartment,55,650,14000,Good,3/month,Good,2.5,5,data/images/Greenview Apartments.jpeg
-sai world city,Panvel,Apartment,68,700,17000,Good,3/month,Good,2,3,data/images/sai world city.jpeg
-Urban Nest Residency,Panvel,Apartment,52,580,13000,Good,4/month,Good,1,4,data/images/Urban Nest Residency.jpeg
-Grand Living,Navi Mumbai,Apartment,75,720,19000,Good,2/month,Exelent,1.5,5,data/images/Grand Living.jpeg
-Skyline Comfort Homes,Navi Mumbai,Apartment,82,750,21000,Good,1/month,Exelent,2,6,data/images/Skyline Comfort Homes.jpeg
-Royal Enclave,Navi Mumbai,Apartment,70,680,18000,Avarage,2/month,Good,2,3,data/images/Royal Enclave.jpeg
-Sample Flat I,Mumbai,Apartment,120,650,32000,Good,1/month,Exelent,3,2,
-Sample Flat J,Mumbai,Apartment,135,700,35000,Good,1/month,Exelent,1.5,3,
-Sample Flat K,Mumbai,Apartment,110,600,29000,Avarage,2/month,Exelent,2,2,
+Harmony Residency,Panvel sector 15,Apartment,58,620,14500,Avarage,3/month,Good,2,3,data/images/Harmony Residency.jpeg
+Elite Heights,Panvel/khanda colony,Apartment,62,600,15500,Avarage,2/month,Good,3,4,data/images/Elite Heights.jpeg
+Greenview Apartments,Panvel/kamothe,Apartment,55,650,14000,Good,3/month,Good,2.5,5,data/images/Greenview Apartments.jpeg
+sai world city,Panvel/paluspa,Apartment,68,700,17000,Good,3/month,Good,2,3,data/images/sai world city.jpeg
+Urban Nest Residency,old Panvel,Apartment,52,580,13000,Good,4/month,Good,1,4,data/images/Urban Nest Residency.jpeg
+Grand Living,Navi Mumbai/seawoods,Apartment,75,720,19000,Good,2/month,Exelent,1.5,5,data/images/Grand Living.jpeg
+Skyline Comfort Homes,Navi Mumbai/Vashi,Apartment,82,750,21000,Good,1/month,Exelent,2,6,data/images/Skyline Comfort Homes.jpeg
+Royal Enclave,Navi Mumbai/ghansoli,Apartment,70,680,18000,Avarage,2/month,Good,2,3,data/images/Royal Enclave.jpeg
+Hiranandani Gardens,Mumbai/powai,Apartment,120,650,32000,Good,1/month,Exelent,3,2,
+Piramal Aranya,Mumbai/byculla,Apartment,135,700,35000,Good,1/month,Exelent,1.5,3,
+Godrej RKS,Mumbai/chembur,Apartment,110,600,29000,Avarage,2/month,Exelent,2,2,
