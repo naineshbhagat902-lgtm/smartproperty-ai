@@ -217,46 +217,23 @@ hr {
 BASE_DIR = Path(__file__).parent
 DATA_FILE = BASE_DIR / "data" / "properties.csv"
 
-st.markdown("""
-<div style="
-    display:flex;
-    align-items:center;
-    gap:16px;
-    padding:10px 0 25px 0;
-">
-    <div style="
-        width:64px;
-        height:64px;
-        background:#142B49;
-        border:2px solid #D9A441;
-        border-radius:16px;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        font-size:34px;
-    ">
-        ⌂
-    </div>
 
-    <div>
-        <div style="
-            font-size:38px;
-            font-weight:800;
-            color:#142B49;
-            letter-spacing:-1.5px;
-        ">
-            SmartProperty <span style="color:#D9A441;">AI</span>
-        </div>
-        <div style="
-            font-size:14px;
-            color:#64748B;
-            letter-spacing:2px;
-        ">
-            REAL ESTATE INTELLIGENCE
-        </div>
-    </div>
+st.markdown("""
+<div style="display:flex;align-items:center;gap:16px;padding:10px 0 25px 0;">
+<div style="width:64px;height:64px;background:#142B49;border:2px solid #D9A441;border-radius:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+<span style="color:#D9A441;font-size:42px;font-weight:700;line-height:1;">⌂</span>
+</div>
+<div>
+<div style="font-size:38px;font-weight:800;color:#142B49;letter-spacing:-1.5px;line-height:1.2;">
+SmartProperty <span style="color:#D9A441;">AI</span>
+</div>
+<div style="font-size:13px;color:#64748B;letter-spacing:2px;margin-top:7px;">
+REAL ESTATE INTELLIGENCE
+</div>
+</div>
 </div>
 """, unsafe_allow_html=True)
+
 
 
 @st.cache_data
