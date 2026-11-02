@@ -217,11 +217,46 @@ hr {
 BASE_DIR = Path(__file__).parent
 DATA_FILE = BASE_DIR / "data" / "properties.csv"
 
-st.title("🏡 SmartProperty AI")
-st.subheader("Real Estate Analytics & Price Prediction")
-st.caption(
-    "AI/ML student prototype | Predictions use illustrative sample data."
-)
+st.markdown("""
+<div style="
+    display:flex;
+    align-items:center;
+    gap:16px;
+    padding:10px 0 25px 0;
+">
+    <div style="
+        width:64px;
+        height:64px;
+        background:#142B49;
+        border:2px solid #D9A441;
+        border-radius:16px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-size:34px;
+    ">
+        ⌂
+    </div>
+
+    <div>
+        <div style="
+            font-size:38px;
+            font-weight:800;
+            color:#142B49;
+            letter-spacing:-1.5px;
+        ">
+            SmartProperty <span style="color:#D9A441;">AI</span>
+        </div>
+        <div style="
+            font-size:14px;
+            color:#64748B;
+            letter-spacing:2px;
+        ">
+            REAL ESTATE INTELLIGENCE
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 
 @st.cache_data
@@ -381,7 +416,7 @@ difference_percent = (
 # ==========================================
 
 # Dashboard heading
-st.markdown("## 🏡 SmartProperty Dashboard")
+st.markdown("## Property Dashboard")
 
 st.caption(
     "Your intelligent real estate dashboard powered by "
