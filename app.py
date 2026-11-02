@@ -15,225 +15,271 @@ st.set_page_config(
     page_icon="🏡",
     layout="wide"
 )
+
 st.markdown("""
 <style>
 
-/* ==========================================
-   SMARTPROPERTY AI - PROFESSIONAL UI THEME
-========================================== */
+/* PREMIUM SMARTPROPERTY AI THEME */
+:root {
+    --navy: #101827;
+    --navy-light: #1C2B40;
+    --gold: #C5A46D;
+    --ivory: #F5F4F0;
+    --white: #FFFFFF;
+    --muted: #A6AFBC;
+}
 
-/* Main application background */
+/* Main page */
 .stApp {
-    background-color: #F4F7FB;
-    color: #1E293B;
+    background: var(--ivory);
+    color: #263449;
+    font-family: "Inter", sans-serif;
+}
+
+.block-container {
+    max-width: 1450px;
+    padding-top: 2rem;
+    padding-bottom: 4rem;
 }
 
 /* Main headings */
-h1, h2, h3, h4, h5, h6 {
-    color: #142B49 !important;
+h1, h2, h3, h4 {
+    color: var(--navy) !important;
     font-weight: 700 !important;
-}
-
-/* Normal text */
-p, label, span, li {
-    color: #334155;
+    letter-spacing: -0.6px;
 }
 
 /* Sidebar */
-[data-testid="stSidebar"] {
-    background-color: #142B49;
+section[data-testid="stSidebar"] {
+    background: var(--navy) !important;
+    border-right: 1px solid #26364A;
 }
 
-[data-testid="stSidebar"] * {
-    color: #FFFFFF !important;
+section[data-testid="stSidebar"] > div {
+    padding: 2rem 1.3rem;
 }
 
-/* Sidebar headings */
-[data-testid="stSidebar"] h1,
-[data-testid="stSidebar"] h2,
-[data-testid="stSidebar"] h3 {
-    color: #FFFFFF !important;
+section[data-testid="stSidebar"] h1,
+section[data-testid="stSidebar"] h2,
+section[data-testid="stSidebar"] h3,
+section[data-testid="stSidebar"] label {
+    color: var(--white) !important;
 }
 
-/* Input fields */
+/* Sidebar dropdowns */
+section[data-testid="stSidebar"] [data-baseweb="select"] > div {
+    background: var(--navy-light) !important;
+    border: 1px solid #39485D !important;
+    border-radius: 8px !important;
+}
+
+/* Sidebar number inputs */
+section[data-testid="stSidebar"] input {
+    background: var(--navy-light) !important;
+    color: var(--white) !important;
+    border: 1px solid #39485D !important;
+    border-radius: 8px !important;
+}
+
+/* Main content inputs */
 .stTextInput input,
 .stNumberInput input,
 .stTextArea textarea {
-    background-color: #FFFFFF;
-    color: #142B49 !important;
-    border: 1px solid #CBD5E1;
     border-radius: 8px;
+    border: 1px solid #D9DDE3;
 }
 
-/* Selectbox */
-[data-baseweb="select"] > div {
-    background-color: #FFFFFF;
-    border-radius: 8px;
-}
-
-[data-baseweb="select"] * {
-    color: #142B49 !important;
-}
-
-/* Widget labels */
-[data-testid="stWidgetLabel"],
-[data-testid="stWidgetLabel"] p {
-    color: #142B49 !important;
-    font-weight: 600;
-}
-
-/* Metric cards */
+/* Premium metric cards */
 [data-testid="stMetric"] {
-    background-color: #FFFFFF;
-    border: 1px solid #E2E8F0;
-    padding: 20px;
-    border-radius: 14px;
-    box-shadow: 0 3px 12px rgba(15, 23, 42, 0.05);
+    background: var(--white);
+    border: 1px solid #E7E3DA;
+    border-radius: 12px;
+    padding: 22px;
+    box-shadow: 0 5px 18px rgba(16, 24, 39, 0.04);
 }
 
-/* Metric labels */
-[data-testid="stMetricLabel"],
-[data-testid="stMetricLabel"] p {
-    color: #64748B !important;
-    font-weight: 600;
+[data-testid="stMetricLabel"] {
+    color: #7C8490 !important;
+    font-weight: 500;
 }
 
-/* Metric values */
-[data-testid="stMetricValue"],
-[data-testid="stMetricValue"] div {
-    color: #142B49 !important;
-    font-weight: 800;
+[data-testid="stMetricValue"] {
+    color: var(--navy) !important;
+    font-weight: 750;
 }
 
 /* Buttons */
 .stButton > button,
-.stDownloadButton > button {
-    background-color: #E98235;
-    color: #FFFFFF !important;
-    border: none;
-    border-radius: 9px;
-    padding: 0.65rem 1rem;
+.stDownloadButton > button,
+.stLinkButton > a {
+    background: var(--navy);
+    color: var(--white) !important;
+    border: 1px solid var(--gold);
+    border-radius: 5px;
+    padding: 0.7rem 1.2rem;
     font-weight: 600;
-    transition: 0.3s ease;
+    transition: all 0.25s ease;
 }
 
-/* Button hover effect */
 .stButton > button:hover,
-.stDownloadButton > button:hover {
-    background-color: #D96D20;
-    color: #FFFFFF !important;
-    border: none;
+.stDownloadButton > button:hover,
+.stLinkButton > a:hover {
+    background: var(--gold);
+    color: var(--navy) !important;
+    border-color: var(--gold);
 }
 
-/* Expanders */
-[data-testid="stExpander"] {
-    background-color: #FFFFFF;
-    border: 1px solid #E2E8F0;
-    border-radius: 12px;
-}
-
-/* Containers */
+/* Property cards and containers */
 [data-testid="stVerticalBlockBorderWrapper"] {
-    background-color: #FFFFFF;
-    border-radius: 14px;
-    border-color: #E2E8F0;
-}
-
-/* Dataframes */
-[data-testid="stDataFrame"] {
-    border: 1px solid #E2E8F0;
+    background: var(--white);
+    border: 1px solid #E7E3DA;
     border-radius: 12px;
-    background-color: #FFFFFF;
+    box-shadow: 0 5px 20px rgba(16, 24, 39, 0.045);
 }
 
-/* Alerts */
-[data-testid="stAlert"] {
-    border-radius: 12px;
+/* Property images */
+[data-testid="stImage"] img {
+    border-radius: 8px;
+    object-fit: cover;
 }
 
-/* Links */
-a {
-    color: #E98235 !important;
-    font-weight: 600;
-}
-
-/* Horizontal divider */
-hr {
-    border-color: #E2E8F0;
-}
-
-/* Dashboard hero section */
-.dashboard-hero {
-    background: linear-gradient(
-        120deg,
-        #142B49,
-        #234B75
-    );
-    padding: 35px;
-    border-radius: 18px;
-    margin-bottom: 20px;
-    box-shadow: 0 5px 18px rgba(20, 43, 73, 0.15);
-}
-
-.dashboard-hero h1 {
-    color: #FFFFFF !important;
-    font-size: 36px;
-    margin-bottom: 8px;
-}
-
-.dashboard-hero p {
-    color: #E2E8F0 !important;
-    font-size: 16px;
-}
-
-/* Property card price */
+/* Property prices */
 .property-price {
-    color: #E98235;
+    color: #B08D57;
     font-size: 25px;
-    font-weight: 800;
+    font-weight: 750;
     margin-bottom: 12px;
 }
 
-/* Smooth page appearance */
-.block-container {
-    padding-top: 2rem;
-    padding-bottom: 3rem;
+/* Data tables */
+[data-testid="stDataFrame"] {
+    border: 1px solid #E7E3DA;
+    border-radius: 10px;
 }
 
-/* Responsive headings */
+/* Expanders and alerts */
+[data-testid="stExpander"],
+[data-testid="stAlert"] {
+    border-radius: 10px;
+}
+
+/* Dividers */
+hr {
+    border-color: #E4DFD5;
+}
+
+/* Responsive layout */
 @media (max-width: 768px) {
-    .dashboard-hero {
-        padding: 22px;
+    .block-container {
+        padding: 1rem;
     }
 
-    .dashboard-hero h1 {
-        font-size: 27px;
+    h1 {
+        font-size: 28px !important;
     }
 }
 
 </style>
 """, unsafe_allow_html=True)
 
+
 BASE_DIR = Path(__file__).parent
 DATA_FILE = BASE_DIR / "data" / "properties.csv"
 
 
+
 st.markdown("""
-<div style="display:flex;align-items:center;gap:16px;padding:10px 0 25px 0;">
-<div style="width:64px;height:64px;background:#142B49;border:2px solid #D9A441;border-radius:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-<span style="color:#D9A441;font-size:42px;font-weight:700;line-height:1;">⌂</span>
-</div>
-<div>
-<div style="font-size:38px;font-weight:800;color:#142B49;letter-spacing:-1.5px;line-height:1.2;">
-SmartProperty <span style="color:#D9A441;">AI</span>
-</div>
-<div style="font-size:13px;color:#64748B;letter-spacing:2px;margin-top:7px;">
-REAL ESTATE INTELLIGENCE
-</div>
-</div>
+<div style="
+    width:100%;
+    min-height:470px;
+    border-radius:18px;
+    overflow:hidden;
+    position:relative;
+    background-image:
+        linear-gradient(90deg, rgba(9,18,31,0.88), rgba(9,18,31,0.25)),
+        url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2000&q=85');
+    background-size:cover;
+    background-position:center;
+    margin-bottom:35px;
+">
+
+    <div style="
+        padding:28px 38px;
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        border-bottom:1px solid rgba(255,255,255,0.2);
+        flex-wrap:wrap;
+        gap:15px;
+    ">
+        <div style="color:white;font-size:23px;font-weight:800;">
+            SMARTPROPERTY <span style="color:#C5A46D;">AI</span>
+            <div style="font-size:9px;letter-spacing:3px;color:#D5D5D5;">
+                REAL ESTATE INTELLIGENCE
+            </div>
+        </div>
+
+        <div style="display:flex;gap:22px;flex-wrap:wrap;font-size:13px;">
+            <a href="#featured-properties" style="color:white;text-decoration:none;">Properties</a>
+            <a href="#ai-insights" style="color:white;text-decoration:none;">AI Insights</a>
+            <a href="#affordability" style="color:white;text-decoration:none;">Affordability</a>
+            <a href="#investment-analysis" style="color:white;text-decoration:none;">Investment</a>
+        </div>
+    </div>
+
+    <div style="
+        padding:75px 38px 85px;
+        max-width:750px;
+    ">
+        <div style="
+            color:#D5B77E;
+            font-size:12px;
+            letter-spacing:4px;
+            font-weight:600;
+            margin-bottom:20px;
+        ">
+            SMARTER PROPERTY DECISIONS START HERE
+        </div>
+
+        <div style="
+            color:white;
+            font-size:clamp(34px,5vw,60px);
+            font-weight:750;
+            line-height:1.12;
+            letter-spacing:-1.5px;
+            margin-bottom:20px;
+        ">
+            Find Your Dream Home.<br>
+            Invest With Intelligence.
+        </div>
+
+        <div style="
+            color:#E1E4E8;
+            font-size:16px;
+            line-height:1.8;
+            max-width:570px;
+            margin-bottom:30px;
+        ">
+            Discover properties, understand market value and
+            make smarter real estate decisions with AI-powered insights.
+        </div>
+
+        <a href="#featured-properties" style="
+            display:inline-block;
+            background:#C5A46D;
+            color:#101827;
+            padding:15px 27px;
+            border-radius:4px;
+            text-decoration:none;
+            font-size:13px;
+            font-weight:750;
+            letter-spacing:0.5px;
+        ">
+            EXPLORE PROPERTIES →
+        </a>
+    </div>
 </div>
 """, unsafe_allow_html=True)
-
 
 
 @st.cache_data
