@@ -188,7 +188,7 @@ DATA_FILE = BASE_DIR / "data" / "properties.csv"
 
 
 
-st.markdown("""
+st.components.v1.html("""
 <div style="
     width:100%;
     min-height:470px;
@@ -279,7 +279,7 @@ st.markdown("""
         </a>
     </div>
 </div>
-""", unsafe_allow_html=True)
+""", height=550, scrolling=False)
 
 
 @st.cache_data
