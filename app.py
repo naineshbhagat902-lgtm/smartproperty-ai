@@ -401,7 +401,10 @@ st.caption(
     "Explore properties available in your existing CSV dataset."
 )
 
-featured_properties = properties.head(6)
+featured_properties = properties[
+    properties["location"].astype(str).str.strip()
+    == str(location).strip()
+].head(6)
 
 property_columns = st.columns(3)
 
