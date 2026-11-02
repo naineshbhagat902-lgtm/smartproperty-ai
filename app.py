@@ -223,26 +223,45 @@ st.caption(
     "AI/ML student prototype | Predictions use illustrative sample data."
 )
 
+
 @st.cache_data
 def load_data():
     df = pd.read_csv(DATA_FILE)
+
     required = [
         "property_name", "location", "property_type",
         "price_lakh", "area_sqft", "monthly_rent",
         "building_age"
     ]
+
     missing = [col for col in required if col not in df.columns]
     if missing:
         raise ValueError(f"Missing CSV columns: {', '.join(missing)}")
 
     df = df.dropna(subset=required).copy()
-    df = df[df["area_sqft"] > 0]
+    df = df[df["area_sqft"] > 0].copy()
+
+    # Group individual localities into their main cities
+    location_text = df["location"].astype(str).str.strip().str.lower()
+
+    df["city"] = "Other"
+    df.loc[location_text.str.contains("panvel", na=False), "city"] = "Panvel"
+    df.loc[location_text.str.contains("navi mumbai", na=False), "city"] = "Navi Mumbai"
+
+    mumbai_mask = (
+        location_text.str.contains("mumbai", na=False)
+        & ~location_text.str.contains("navi mumbai", na=False)
+    )
+    df.loc[mumbai_mask, "city"] = "Mumbai"
+
     return df
+
+
 
 @st.cache_resource
 def train_model(data):
     features = [
-        "location", "property_type",
+        "city", "property_type",
         "area_sqft", "building_age"
     ]
 
@@ -250,9 +269,13 @@ def train_model(data):
         (
             "category",
             OneHotEncoder(handle_unknown="ignore"),
-            ["location", "property_type"]
+            ["city", "property_type"]
         ),
-        ("numbers", "passthrough", ["area_sqft", "building_age"])
+        (
+            "numbers",
+            "passthrough",
+            ["area_sqft", "building_age"]
+        )
     ])
 
     pipeline = Pipeline([
@@ -265,6 +288,7 @@ def train_model(data):
 
     pipeline.fit(data[features], data["price_lakh"])
     return pipeline
+
 
 try:
     properties = load_data()
@@ -335,12 +359,17 @@ price_per_sqft = price_rupees / area
 annual_rent = monthly_rent * 12
 gross_yield = annual_rent / price_rupees * 100
 
+selected_city = properties.loc[
+    properties["location"] == location, "city"
+].iloc[0]
+
 input_data = pd.DataFrame([{
-    "location": location,
+    "city": selected_city,
     "property_type": property_type,
     "area_sqft": area,
     "building_age": age
 }])
+
 
 predicted_lakh = max(0, float(model.predict(input_data)[0]))
 difference = price_lakh - predicted_lakh
