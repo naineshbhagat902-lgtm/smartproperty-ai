@@ -220,10 +220,10 @@ st.components.v1.html("""
         </div>
 
         <div style="display:flex;gap:22px;flex-wrap:wrap;font-size:13px;">
-            <a href="#featured-properties" style="color:white;text-decoration:none;">Properties</a>
-            <a href="#ai-insights" style="color:white;text-decoration:none;">AI Insights</a>
-            <a href="#affordability" style="color:white;text-decoration:none;">Affordability</a>
-            <a href="#investment-analysis" style="color:white;text-decoration:none;">Investment</a>
+            <a href="#featured-properties" target="_parent" style="color:white;text-decoration:none;">Properties</a>
+            <a href="#ai-insights" target="_parent" style="color:white;text-decoration:none;">AI Insights</a>
+            <a href="#affordability" target="_parent" style="color:white;text-decoration:none;">Affordability</a>
+            <a href="#investment-analysis" target="_parent" style="color:white;text-decoration:none;">Investment</a>
         </div>
     </div>
 
@@ -480,8 +480,7 @@ st.divider()
 # 2. FEATURED PROPERTY CARDS
 # ==========================================
 
-st.markdown("### 🏘️ Featured Properties")
-
+st.markdown('<div id="featured-properties"></div>', unsafe_allow_html=True)
 st.caption(
     "Explore properties available in your existing CSV dataset."
 )
@@ -547,7 +546,7 @@ st.divider()
 # 3. AI PROPERTY ANALYTICS
 # ==========================================
 
-st.markdown("### 🤖 AI Property Analytics")
+st.markdown('<div id="ai-insights"></div>', unsafe_allow_html=True)
 
 ai_col1, ai_col2 = st.columns(2)
 
@@ -811,6 +810,7 @@ st.caption(
 # =====================================================
 
 st.divider()
+st.markdown('<div id="affordability"></div>', unsafe_allow_html=True)
 st.header("🏡 Home Affordability & Loan Calculator")
 
 st.write(
@@ -1636,6 +1636,7 @@ else:
 # ==========================================
 
 st.divider()
+st.markdown('<div id="investment-analysis"></div>', unsafe_allow_html=True)
 st.subheader("📈 2. Future Investment Analysis")
 
 st.write(
