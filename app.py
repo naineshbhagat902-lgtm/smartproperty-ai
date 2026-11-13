@@ -590,8 +590,7 @@ else:
 
                 st.divider()
 
-                    detail1, detail2 = st.columns(2)
-
+                                    detail1, detail2 = st.columns(2)
                 detail1.metric(
                     "Area",
                     f"{float(prop['area_sqft']):,.0f} sq.ft."
