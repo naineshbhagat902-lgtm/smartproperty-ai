@@ -31,7 +31,19 @@ st.markdown("""
 
 /* Main page */
 .stApp {
-    background: var(--ivory);
+    background:
+        radial-gradient(
+            circle at 10% 10%,
+            rgba(197, 164, 109, 0.13),
+            transparent 32%
+        ),
+        radial-gradient(
+            circle at 90% 80%,
+            rgba(120, 150, 190, 0.12),
+            transparent 35%
+        ),
+        #F5F4F0;
+
     color: #263449;
     font-family: "Inter", sans-serif;
 }
@@ -89,18 +101,33 @@ section[data-testid="stSidebar"] input {
     border: 1px solid #D9DDE3;
 }
 
-/* FIXED RESPONSIVE PROPERTY METRIC CARDS */
+
+/* PREMIUM GLASS METRIC CARDS */
 [data-testid="stMetric"] {
-    background: var(--white);
-    border: 1px solid #E7E3DA;
-    border-radius: 12px;
-    padding: 14px 10px !important;
+    background: rgba(255, 255, 255, 0.58) !important;
+    border: 1px solid rgba(255, 255, 255, 0.85) !important;
+    border-radius: 18px !important;
+
+    padding: 18px 14px !important;
     width: 100%;
     min-width: 0;
     box-sizing: border-box;
-    overflow: visible;
-    box-shadow: 0 5px 18px rgba(16, 24, 39, 0.04);
+
+    backdrop-filter: blur(16px) saturate(150%);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+
+    box-shadow:
+        0 6px 24px rgba(16, 24, 39, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+
+    transition: all 0.25s ease;
 }
+
+[data-testid="stMetric"]:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 28px rgba(16, 24, 39, 0.10);
+}
+
 
 /* Metric labels */
 [data-testid="stMetricLabel"] {
@@ -145,13 +172,36 @@ section[data-testid="stSidebar"] input {
     border-color: var(--gold);
 }
 
-/* Property cards and containers */
+
+/* APPLE-INSPIRED GLASSMORPHISM CARDS */
 [data-testid="stVerticalBlockBorderWrapper"] {
-    background: var(--white);
-    border: 1px solid #E7E3DA;
-    border-radius: 12px;
-    box-shadow: 0 5px 20px rgba(16, 24, 39, 0.045);
+    background: rgba(255, 255, 255, 0.62) !important;
+    border: 1px solid rgba(255, 255, 255, 0.85) !important;
+    border-radius: 20px !important;
+
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+
+    box-shadow:
+        0 8px 32px rgba(16, 24, 39, 0.07),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+
+    transition:
+        transform 0.3s ease,
+        box-shadow 0.3s ease,
+        background 0.3s ease;
 }
+
+[data-testid="stVerticalBlockBorderWrapper"]:hover {
+    transform: translateY(-4px);
+
+    background: rgba(255, 255, 255, 0.78) !important;
+
+    box-shadow:
+        0 16px 40px rgba(16, 24, 39, 0.11),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
 
 /* Property images */
 [data-testid="stImage"] img {
