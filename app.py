@@ -590,7 +590,7 @@ else:
 
                 st.divider()
 
-             detail1, detail2 = st.columns(2, gap="small")
+                    detail1, detail2 = st.columns(2)
 
                 detail1.metric(
                     "Area",
