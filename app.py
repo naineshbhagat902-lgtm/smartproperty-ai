@@ -174,34 +174,43 @@ section[data-testid="stSidebar"] input {
 
 
 /* APPLE-INSPIRED GLASSMORPHISM CARDS */
-[data-testid="stVerticalBlockBorderWrapper"] {
-    background: rgba(255, 255, 255, 0.62) !important;
+
+/* APPLE PREMIUM FROSTED GLASS PROPERTY CARDS */
+
+[data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stImage"]) {
+    background: rgba(255, 255, 255, 0.42) !important;
     border: 1px solid rgba(255, 255, 255, 0.85) !important;
-    border-radius: 20px !important;
+    border-radius: 22px !important;
 
-    backdrop-filter: blur(18px) saturate(160%);
-    -webkit-backdrop-filter: blur(18px) saturate(160%);
-
-    box-shadow:
-        0 8px 32px rgba(16, 24, 39, 0.07),
-        inset 0 1px 0 rgba(255, 255, 255, 0.8);
-
-    transition:
-        transform 0.3s ease,
-        box-shadow 0.3s ease,
-        background 0.3s ease;
-}
-
-[data-testid="stVerticalBlockBorderWrapper"]:hover {
-    transform: translateY(-4px);
-
-    background: rgba(255, 255, 255, 0.78) !important;
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
 
     box-shadow:
-        0 16px 40px rgba(16, 24, 39, 0.11),
-        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        0 8px 32px rgba(31, 41, 55, 0.07),
+        inset 0 1px 1px rgba(255, 255, 255, 0.9);
+
+    transition: transform 0.35s ease,
+                box-shadow 0.35s ease,
+                background 0.35s ease;
 }
 
+[data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stImage"]):hover {
+    transform: translateY(-6px);
+    background: rgba(255, 255, 255, 0.58) !important;
+
+    box-shadow:
+        0 18px 45px rgba(31, 41, 55, 0.12),
+        inset 0 1px 1px rgba(255, 255, 255, 1);
+}
+
+[data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stImage"]) img {
+    border-radius: 14px;
+    transition: transform 0.4s ease;
+}
+
+[data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stImage"]):hover img {
+    transform: scale(1.015);
+}
 
 /* Property images */
 [data-testid="stImage"] img {
