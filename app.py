@@ -30,19 +30,27 @@ st.markdown("""
 }
 
 /* Main page */
+
+/* PREMIUM AMBIENT GLASS BACKGROUND */
+
 .stApp {
     background:
         radial-gradient(
-            circle at 10% 10%,
-            rgba(197, 164, 109, 0.13),
-            transparent 32%
+            circle at 12% 15%,
+            rgba(196, 164, 120, 0.30),
+            transparent 38%
         ),
         radial-gradient(
-            circle at 90% 80%,
-            rgba(120, 150, 190, 0.12),
-            transparent 35%
+            circle at 85% 25%,
+            rgba(105, 160, 220, 0.28),
+            transparent 40%
         ),
-        #F5F4F0;
+        radial-gradient(
+            circle at 55% 90%,
+            rgba(175, 185, 220, 0.25),
+            transparent 42%
+        ),
+        #E9EDF3 !important;
 
     color: #263449;
     font-family: "Inter", sans-serif;
@@ -173,44 +181,58 @@ section[data-testid="stSidebar"] input {
 }
 
 
-/* APPLE-INSPIRED GLASSMORPHISM CARDS */
+/* PREMIUM APPLE-INSPIRED GLASS PROPERTY CARDS */
 
-/* APPLE PREMIUM FROSTED GLASS PROPERTY CARDS */
+div[data-testid="stVerticalBlockBorderWrapper"]:has(
+    [class*="st-key-property-card-"]
+) {
+    background: rgba(255, 255, 255, 0.30) !important;
+    border: 1px solid rgba(255, 255, 255, 0.95) !important;
+    border-radius: 24px !important;
 
-[data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stImage"]) {
-    background: rgba(255, 255, 255, 0.42) !important;
-    border: 1px solid rgba(255, 255, 255, 0.85) !important;
-    border-radius: 22px !important;
-
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-
-    box-shadow:
-        0 8px 32px rgba(31, 41, 55, 0.07),
-        inset 0 1px 1px rgba(255, 255, 255, 0.9);
-
-    transition: transform 0.35s ease,
-                box-shadow 0.35s ease,
-                background 0.35s ease;
-}
-
-[data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stImage"]):hover {
-    transform: translateY(-6px);
-    background: rgba(255, 255, 255, 0.58) !important;
+    backdrop-filter: blur(35px) saturate(200%);
+    -webkit-backdrop-filter: blur(35px) saturate(200%);
 
     box-shadow:
-        0 18px 45px rgba(31, 41, 55, 0.12),
-        inset 0 1px 1px rgba(255, 255, 255, 1);
+        0 12px 40px rgba(25, 35, 55, 0.10),
+        0 0 18px rgba(255, 255, 255, 0.45),
+        inset 0 1px 2px rgba(255, 255, 255, 0.95);
+
+    overflow: hidden;
+    transition: all 0.35s ease;
 }
 
-[data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stImage"]) img {
-    border-radius: 14px;
+div[data-testid="stVerticalBlockBorderWrapper"]:has(
+    [class*="st-key-property-card-"]
+) > div {
+    background: transparent !important;
+}
+
+div[data-testid="stVerticalBlockBorderWrapper"]:has(
+    [class*="st-key-property-card-"]
+):hover {
+    transform: translateY(-7px);
+
+    background: rgba(255, 255, 255, 0.48) !important;
+
+    box-shadow:
+        0 22px 55px rgba(25, 35, 55, 0.15),
+        0 0 25px rgba(255, 255, 255, 0.75);
+}
+
+div[data-testid="stVerticalBlockBorderWrapper"]:has(
+    [class*="st-key-property-card-"]
+) img {
+    border-radius: 18px !important;
     transition: transform 0.4s ease;
 }
 
-[data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stImage"]):hover img {
-    transform: scale(1.015);
+div[data-testid="stVerticalBlockBorderWrapper"]:has(
+    [class*="st-key-property-card-"]
+):hover img {
+    transform: scale(1.02);
 }
+
 
 /* Property images */
 [data-testid="stImage"] img {
@@ -575,7 +597,10 @@ else:
     ):
         with property_columns[index % 3]:
 
-            with st.container(border=True):
+            with st.container(
+    border=True,
+    key=f"property-card-{index}"
+):
 
                 image_path = prop.get("image_path", "")
 
