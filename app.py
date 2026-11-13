@@ -89,24 +89,40 @@ section[data-testid="stSidebar"] input {
     border: 1px solid #D9DDE3;
 }
 
-/* Premium metric cards */
+/* FIXED RESPONSIVE PROPERTY METRIC CARDS */
 [data-testid="stMetric"] {
     background: var(--white);
     border: 1px solid #E7E3DA;
     border-radius: 12px;
-    padding: 22px;
+    padding: 14px 10px !important;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow: visible;
     box-shadow: 0 5px 18px rgba(16, 24, 39, 0.04);
 }
 
+/* Metric labels */
 [data-testid="stMetricLabel"] {
     color: #7C8490 !important;
-    font-weight: 500;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+    white-space: normal !important;
+    overflow: visible !important;
 }
 
+/* Metric values */
 [data-testid="stMetricValue"] {
     color: var(--navy) !important;
-    font-weight: 750;
+    font-weight: 750 !important;
+    font-size: clamp(14px, 1.2vw, 19px) !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    overflow-wrap: anywhere !important;
+    line-height: 1.3 !important;
 }
+
 
 /* Buttons */
 .stButton > button,
@@ -574,7 +590,7 @@ else:
 
                 st.divider()
 
-                detail1, detail2 = st.columns(2)
+             detail1, detail2 = st.columns(2, gap="small")
 
                 detail1.metric(
                     "Area",
