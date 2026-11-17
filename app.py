@@ -234,11 +234,58 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(
 }
 
 
-/* Property images */
-[data-testid="stImage"] img {
-    border-radius: 8px;
+
+/* PREMIUM FROSTED GLASS FRAME FOR PROPERTY PHOTOS */
+
+div[data-testid="stVerticalBlockBorderWrapper"]:has(
+    [class*="st-key-property-card-"]
+) [data-testid="stImage"] {
+    box-sizing: border-box !important;
+    padding: 7px !important;
+
+    background: linear-gradient(
+        135deg,
+        rgba(255,255,255,0.85),
+        rgba(255,255,255,0.22),
+        rgba(255,255,255,0.72)
+    ) !important;
+
+    border: 1px solid rgba(255,255,255,0.95) !important;
+    border-radius: 23px !important;
+
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+
+    box-shadow:
+        0 10px 28px rgba(25,35,55,0.13),
+        0 0 18px rgba(255,255,255,0.65),
+        inset 0 1px 3px rgba(255,255,255,0.95);
+
+    transition: all 0.35s ease;
+}
+
+/* IMAGE INSIDE GLASS FRAME */
+div[data-testid="stVerticalBlockBorderWrapper"]:has(
+    [class*="st-key-property-card-"]
+) [data-testid="stImage"] img {
+    display: block;
+    width: 100%;
+    border-radius: 16px !important;
     object-fit: cover;
 }
+
+/* PREMIUM HOVER EFFECT */
+div[data-testid="stVerticalBlockBorderWrapper"]:has(
+    [class*="st-key-property-card-"]
+) [data-testid="stImage"]:hover {
+    box-shadow:
+        0 15px 35px rgba(25,35,55,0.18),
+        0 0 25px rgba(255,255,255,0.9),
+        inset 0 1px 3px white;
+
+    transform: translateY(-3px);
+}
+
 
 /* Property prices */
 .property-price {
