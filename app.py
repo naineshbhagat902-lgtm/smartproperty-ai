@@ -19,42 +19,51 @@ st.set_page_config(
 st.markdown("""
 <style>
 
-/* PREMIUM SMARTPROPERTY AI THEME */
+/* =========================================
+   SMARTPROPERTY AI — IPHONE LIQUID GLASS
+========================================= */
+
 :root {
-    --navy: #101827;
-    --navy-light: #1C2B40;
-    --gold: #C5A46D;
-    --ivory: #F5F4F0;
-    --white: #FFFFFF;
-    --muted: #A6AFBC;
+    --glass-white: rgba(255, 255, 255, 0.20);
+    --glass-border: rgba(255, 255, 255, 0.62);
+    --glass-shadow: 0 12px 40px rgba(40, 70, 120, 0.10);
+    --text-main: #17243a;
+    --text-muted: #687991;
+    --blue-glow: rgba(105, 180, 255, 0.28);
 }
 
-/* Main page */
-
-/* PREMIUM AMBIENT GLASS BACKGROUND */
+/* MAIN BACKGROUND */
 
 .stApp {
     background:
         radial-gradient(
-            circle at 12% 15%,
-            rgba(196, 164, 120, 0.30),
-            transparent 38%
+            circle at 12% 12%,
+            rgba(105, 190, 255, 0.30),
+            transparent 34%
         ),
         radial-gradient(
-            circle at 85% 25%,
-            rgba(105, 160, 220, 0.28),
+            circle at 88% 18%,
+            rgba(174, 150, 255, 0.24),
+            transparent 36%
+        ),
+        radial-gradient(
+            circle at 50% 90%,
+            rgba(130, 220, 255, 0.22),
             transparent 40%
         ),
-        radial-gradient(
-            circle at 55% 90%,
-            rgba(175, 185, 220, 0.25),
-            transparent 42%
-        ),
-        #E9EDF3 !important;
+        linear-gradient(
+            135deg,
+            #eaf4ff,
+            #f5f7ff 48%,
+            #e9f1ff
+        ) !important;
 
-    color: #263449;
-    font-family: "Inter", sans-serif;
+    color: var(--text-main);
+    font-family: "Inter", -apple-system, BlinkMacSystemFont,
+                 "Segoe UI", sans-serif;
 }
+
+/* MAIN CONTENT WIDTH */
 
 .block-container {
     max-width: 1450px;
@@ -62,170 +71,143 @@ st.markdown("""
     padding-bottom: 4rem;
 }
 
-/* Main headings */
+/* HEADINGS */
+
 h1, h2, h3, h4 {
-    color: var(--navy) !important;
-    font-weight: 700 !important;
-    letter-spacing: -0.6px;
+    color: var(--text-main) !important;
+    font-weight: 750 !important;
+    letter-spacing: -0.7px;
 }
 
+/* =========================================
+   TRANSPARENT GLASS SIDEBAR
+========================================= */
 
-/* PREMIUM WALNUT GLASS SIDEBAR */
 section[data-testid="stSidebar"] {
-    background:
-        linear-gradient(
-            145deg,
-            rgba(54, 39, 29, 0.97),
-            rgba(29, 25, 23, 0.96)
-        ) !important;
-    border-right: 1px solid rgba(218, 184, 128, 0.35);
-    box-shadow: 8px 0 35px rgba(20, 15, 10, 0.18);
+    background: rgba(255, 255, 255, 0.22) !important;
+    border-right: 1px solid rgba(255,255,255,0.65);
+    backdrop-filter: blur(35px) saturate(180%);
+    -webkit-backdrop-filter: blur(35px) saturate(180%);
+    box-shadow: 8px 0 35px rgba(60, 100, 160, 0.08);
 }
 
 section[data-testid="stSidebar"] > div {
-    padding: 2rem 1.25rem;
+    background: transparent !important;
+    padding: 2rem 1.2rem;
 }
 
 section[data-testid="stSidebar"] h1,
 section[data-testid="stSidebar"] h2,
-section[data-testid="stSidebar"] h3 {
-    color: #F7EBDD !important;
-    font-weight: 700 !important;
-}
-
+section[data-testid="stSidebar"] h3,
 section[data-testid="stSidebar"] p,
 section[data-testid="stSidebar"] label,
 section[data-testid="stSidebar"] .stCaption {
-    color: #E5D7C5 !important;
+    color: #263b58 !important;
 }
 
-/* Sidebar select boxes */
+/* SIDEBAR SELECT BOXES */
+
 section[data-testid="stSidebar"] [data-baseweb="select"] > div {
-    background: rgba(255, 255, 255, 0.10) !important;
-    border: 1px solid rgba(235, 207, 164, 0.35) !important;
-    border-radius: 12px !important;
-    color: #FFFFFF !important;
-    backdrop-filter: blur(14px);
+    background: rgba(255,255,255,0.38) !important;
+    border: 1px solid rgba(255,255,255,0.85) !important;
+    border-radius: 15px !important;
+    backdrop-filter: blur(20px);
+    box-shadow: inset 0 1px 2px rgba(255,255,255,0.9);
 }
 
-/* Sidebar number inputs */
+/* SIDEBAR INPUTS */
+
 section[data-testid="stSidebar"] input {
-    background: rgba(255, 255, 255, 0.10) !important;
-    color: #FFFFFF !important;
-    border: 1px solid rgba(235, 207, 164, 0.35) !important;
-    border-radius: 12px !important;
+    background: rgba(255,255,255,0.38) !important;
+    color: #17243a !important;
+    border: 1px solid rgba(255,255,255,0.85) !important;
+    border-radius: 15px !important;
 }
 
-/* Sidebar checkbox */
-section[data-testid="stSidebar"] [data-testid="stCheckbox"] label {
-    color: #F3E6D4 !important;
-}
+/* SIDEBAR SPACING */
 
-/* Sidebar widget spacing */
 section[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
-    gap: 0.85rem;
+    gap: 0.9rem;
 }
 
-/* Main content inputs */
-.stTextInput input,
-.stNumberInput input,
-.stTextArea textarea {
-    border-radius: 8px;
-    border: 1px solid #D9DDE3;
-}
+/* =========================================
+   GLASS METRIC CARDS
+========================================= */
 
-
-/* PREMIUM GLASS METRIC CARDS */
 [data-testid="stMetric"] {
-    background: rgba(255, 255, 255, 0.58) !important;
-    border: 1px solid rgba(255, 255, 255, 0.85) !important;
-    border-radius: 18px !important;
+    position: relative;
+    overflow: hidden;
 
-    padding: 18px 14px !important;
-    width: 100%;
-    min-width: 0;
-    box-sizing: border-box;
+    background: rgba(255,255,255,0.30) !important;
+    border: 1px solid rgba(255,255,255,0.82) !important;
+    border-radius: 23px !important;
 
-    backdrop-filter: blur(16px) saturate(150%);
-    -webkit-backdrop-filter: blur(16px) saturate(150%);
+    padding: 20px 17px !important;
+
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
 
     box-shadow:
-        0 6px 24px rgba(16, 24, 39, 0.06),
-        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        0 12px 35px rgba(50,80,130,0.09),
+        inset 0 1px 2px rgba(255,255,255,0.95);
 
-    transition: all 0.25s ease;
+    transition: all 0.3s ease;
 }
 
 [data-testid="stMetric"]:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 28px rgba(16, 24, 39, 0.10);
+    transform: translateY(-5px);
+    box-shadow:
+        0 18px 42px rgba(60,110,180,0.15),
+        0 0 22px rgba(255,255,255,0.8),
+        inset 0 1px 2px white;
 }
 
-
-/* Metric labels */
 [data-testid="stMetricLabel"] {
-    color: #7C8490 !important;
-    font-weight: 600 !important;
-    font-size: 13px !important;
-    white-space: normal !important;
-    overflow: visible !important;
+    color: var(--text-muted) !important;
+    font-weight: 650 !important;
 }
 
-/* Metric values */
 [data-testid="stMetricValue"] {
-    color: var(--navy) !important;
-    font-weight: 750 !important;
-    font-size: clamp(14px, 1.2vw, 19px) !important;
-    white-space: normal !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
+    color: #172b49 !important;
+    font-weight: 780 !important;
     overflow-wrap: anywhere !important;
-    line-height: 1.3 !important;
 }
 
-
-/* Buttons */
-.stButton > button,
-.stDownloadButton > button,
-.stLinkButton > a {
-    background: var(--navy);
-    color: var(--white) !important;
-    border: 1px solid var(--gold);
-    border-radius: 5px;
-    padding: 0.7rem 1.2rem;
-    font-weight: 600;
-    transition: all 0.25s ease;
-}
-
-.stButton > button:hover,
-.stDownloadButton > button:hover,
-.stLinkButton > a:hover {
-    background: var(--gold);
-    color: var(--navy) !important;
-    border-color: var(--gold);
-}
-
-
-/* PREMIUM APPLE-INSPIRED GLASS PROPERTY CARDS */
+/* =========================================
+   GLASS PROPERTY CARDS
+========================================= */
 
 div[data-testid="stVerticalBlockBorderWrapper"]:has(
     [class*="st-key-property-card-"]
 ) {
-    background: rgba(255, 255, 255, 0.30) !important;
-    border: 1px solid rgba(255, 255, 255, 0.95) !important;
-    border-radius: 24px !important;
+    position: relative;
+    overflow: hidden;
 
-    backdrop-filter: blur(35px) saturate(200%);
-    -webkit-backdrop-filter: blur(35px) saturate(200%);
+    background: rgba(255,255,255,0.25) !important;
+    border: 1px solid rgba(255,255,255,0.82) !important;
+    border-radius: 26px !important;
+
+    backdrop-filter: blur(32px) saturate(190%);
+    -webkit-backdrop-filter: blur(32px) saturate(190%);
 
     box-shadow:
-        0 12px 40px rgba(25, 35, 55, 0.10),
-        0 0 18px rgba(255, 255, 255, 0.45),
-        inset 0 1px 2px rgba(255, 255, 255, 0.95);
+        0 15px 45px rgba(45,75,125,0.10),
+        inset 0 1px 2px rgba(255,255,255,0.95);
 
-    overflow: hidden;
     transition: all 0.35s ease;
 }
+
+div[data-testid="stVerticalBlockBorderWrapper"]:has(
+    [class*="st-key-property-card-"]
+):hover {
+    transform: translateY(-7px);
+    background: rgba(255,255,255,0.42) !important;
+    box-shadow:
+        0 22px 55px rgba(45,90,155,0.16),
+        0 0 25px rgba(255,255,255,0.8);
+}
+
+/* PROPERTY CARD CONTENT */
 
 div[data-testid="stVerticalBlockBorderWrapper"]:has(
     [class*="st-key-property-card-"]
@@ -233,111 +215,90 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(
     background: transparent !important;
 }
 
-div[data-testid="stVerticalBlockBorderWrapper"]:has(
-    [class*="st-key-property-card-"]
-):hover {
-    transform: translateY(-7px);
+/* PROPERTY IMAGES */
 
-    background: rgba(255, 255, 255, 0.48) !important;
-
-    box-shadow:
-        0 22px 55px rgba(25, 35, 55, 0.15),
-        0 0 25px rgba(255, 255, 255, 0.75);
-}
-
-div[data-testid="stVerticalBlockBorderWrapper"]:has(
-    [class*="st-key-property-card-"]
-) img {
-    border-radius: 18px !important;
-    transition: transform 0.4s ease;
-}
-
-div[data-testid="stVerticalBlockBorderWrapper"]:has(
-    [class*="st-key-property-card-"]
-):hover img {
-    transform: scale(1.02);
-}
-
-
-
-/* PREMIUM FROSTED GLASS FRAME FOR PROPERTY PHOTOS */
-
-div[data-testid="stVerticalBlockBorderWrapper"]:has(
-    [class*="st-key-property-card-"]
-) [data-testid="stImage"] {
-    box-sizing: border-box !important;
-    padding: 7px !important;
-
-    background: linear-gradient(
-        135deg,
-        rgba(255,255,255,0.85),
-        rgba(255,255,255,0.22),
-        rgba(255,255,255,0.72)
-    ) !important;
-
-    border: 1px solid rgba(255,255,255,0.95) !important;
-    border-radius: 23px !important;
-
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-
-    box-shadow:
-        0 10px 28px rgba(25,35,55,0.13),
-        0 0 18px rgba(255,255,255,0.65),
-        inset 0 1px 3px rgba(255,255,255,0.95);
-
-    transition: all 0.35s ease;
-}
-
-/* IMAGE INSIDE GLASS FRAME */
 div[data-testid="stVerticalBlockBorderWrapper"]:has(
     [class*="st-key-property-card-"]
 ) [data-testid="stImage"] img {
-    display: block;
-    width: 100%;
-    border-radius: 16px !important;
+    border-radius: 19px !important;
     object-fit: cover;
 }
 
-/* PREMIUM HOVER EFFECT */
-div[data-testid="stVerticalBlockBorderWrapper"]:has(
-    [class*="st-key-property-card-"]
-) [data-testid="stImage"]:hover {
-    box-shadow:
-        0 15px 35px rgba(25,35,55,0.18),
-        0 0 25px rgba(255,255,255,0.9),
-        inset 0 1px 3px white;
+/* PROPERTY PRICE */
 
-    transform: translateY(-3px);
-}
-
-
-/* Property prices */
 .property-price {
-    color: #B08D57;
+    color: #347fc7 !important;
     font-size: 25px;
-    font-weight: 750;
-    margin-bottom: 12px;
+    font-weight: 800;
 }
 
-/* Data tables */
-[data-testid="stDataFrame"] {
-    border: 1px solid #E7E3DA;
-    border-radius: 10px;
+/* =========================================
+   GLASS INPUTS
+========================================= */
+
+.stTextInput input,
+.stNumberInput input,
+.stTextArea textarea {
+    background: rgba(255,255,255,0.40) !important;
+    border: 1px solid rgba(255,255,255,0.90) !important;
+    border-radius: 14px !important;
+    color: #17243a !important;
+    backdrop-filter: blur(18px);
 }
 
-/* Expanders and alerts */
+/* =========================================
+   GLASS BUTTONS
+========================================= */
+
+.stButton > button,
+.stDownloadButton > button,
+.stLinkButton > a {
+    background: rgba(255,255,255,0.38) !important;
+    color: #1b4775 !important;
+
+    border: 1px solid rgba(255,255,255,0.90) !important;
+    border-radius: 16px !important;
+
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+
+    box-shadow:
+        0 7px 22px rgba(50,90,150,0.09),
+        inset 0 1px 2px white;
+
+    font-weight: 700;
+    transition: all 0.3s ease;
+}
+
+.stButton > button:hover,
+.stDownloadButton > button:hover,
+.stLinkButton > a:hover {
+    background: rgba(255,255,255,0.72) !important;
+    border-color: white !important;
+    transform: translateY(-3px);
+    box-shadow: 0 12px 28px rgba(65,130,200,0.16);
+}
+
+/* =========================================
+   GLASS TABLES AND EXPANDERS
+========================================= */
+
+[data-testid="stDataFrame"],
 [data-testid="stExpander"],
 [data-testid="stAlert"] {
-    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.75);
+    border-radius: 19px !important;
+    overflow: hidden;
 }
 
-/* Dividers */
+/* GENERAL DIVIDERS */
+
 hr {
-    border-color: #E4DFD5;
+    border-color: rgba(255,255,255,0.75) !important;
 }
 
-/* Responsive layout */
+/* RESPONSIVE MOBILE DESIGN */
+
 @media (max-width: 768px) {
     .block-container {
         padding: 1rem;
@@ -346,86 +307,16 @@ hr {
     h1 {
         font-size: 28px !important;
     }
+
+    [data-testid="stMetric"] {
+        border-radius: 18px !important;
+        padding: 14px !important;
+    }
 }
 
- 
-/* WALNUT AND CHAMPAGNE DASHBOARD BACKGROUND */
-.stApp {
-    background:
-        radial-gradient(
-            circle at 10% 10%,
-            rgba(190, 151, 103, 0.20),
-            transparent 35%
-        ),
-        radial-gradient(
-            circle at 90% 20%,
-            rgba(255, 255, 255, 0.75),
-            transparent 38%
-        ),
-        linear-gradient(
-            135deg,
-            #E9E0D4,
-            #F4F0E9 48%,
-            #E7DED2
-        ) !important;
-}
-
-/* GLASS DASHBOARD SECTIONS */
-[data-testid="stVerticalBlockBorderWrapper"] {
-    border: 1px solid rgba(255,255,255,0.78);
-    border-radius: 20px;
-    background: rgba(255,255,255,0.36);
-    backdrop-filter: blur(20px) saturate(150%);
-    -webkit-backdrop-filter: blur(20px) saturate(150%);
-    box-shadow:
-        0 10px 30px rgba(65,48,32,0.07),
-        inset 0 1px 0 rgba(255,255,255,0.8);
-}
-
-/* GLASS METRIC CARDS */
-[data-testid="stMetric"] {
-    background: rgba(255,255,255,0.60) !important;
-    border: 1px solid rgba(255,255,255,0.9) !important;
-    border-radius: 18px !important;
-    padding: 18px !important;
-    box-shadow: 0 8px 25px rgba(67,49,31,0.07);
-    backdrop-filter: blur(16px);
-}
-
-/* DASHBOARD HEADINGS */
-h1, h2, h3, h4 {
-    color: #38291F !important;
-    letter-spacing: -0.5px;
-}
-
-/* TABLE GLASS STYLE */
-[data-testid="stDataFrame"] {
-    border: 1px solid rgba(255,255,255,0.9);
-    border-radius: 16px;
-    overflow: hidden;
-}
-
-/* BUTTONS */
-.stButton > button,
-.stDownloadButton > button,
-.stLinkButton > a {
-    background: linear-gradient(135deg, #59402D, #8B6845) !important;
-    color: #FFF8EE !important;
-    border: 1px solid #C5A46D !important;
-    border-radius: 12px !important;
-    padding: 0.7rem 1.2rem;
-    transition: all 0.25s ease;
-}
-
-.stButton > button:hover,
-.stDownloadButton > button:hover,
-.stLinkButton > a:hover {
-    background: #C5A46D !important;
-    color: #302319 !important;
-    transform: translateY(-2px);
-}
 </style>
 """, unsafe_allow_html=True)
+
 
 
 BASE_DIR = Path(__file__).parent
@@ -433,73 +324,119 @@ DATA_FILE = BASE_DIR / "data" / "properties.csv"
 
 
 
+
 st.components.v1.html("""
 <div style="
     width:100%;
     min-height:470px;
-    border-radius:18px;
+    border-radius:30px;
     overflow:hidden;
     position:relative;
     background-image:
-        linear-gradient(90deg, rgba(9,18,31,0.88), rgba(9,18,31,0.25)),
+        linear-gradient(
+            100deg,
+            rgba(8,25,48,0.78),
+            rgba(8,25,48,0.20)
+        ),
         url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2000&q=85');
     background-size:cover;
     background-position:center;
     margin-bottom:35px;
+    box-shadow:0 25px 70px rgba(30,65,110,0.20);
 ">
 
+    <!-- FLOATING GLASS NAVIGATION -->
+
     <div style="
-        padding:28px 38px;
+        margin:20px;
+        padding:18px 25px;
         display:flex;
         justify-content:space-between;
         align-items:center;
-        border-bottom:1px solid rgba(255,255,255,0.2);
         flex-wrap:wrap;
         gap:15px;
+        border:1px solid rgba(255,255,255,0.48);
+        border-radius:22px;
+        background:rgba(255,255,255,0.16);
+        backdrop-filter:blur(25px);
+        -webkit-backdrop-filter:blur(25px);
+        box-shadow:inset 0 1px 2px rgba(255,255,255,0.7);
     ">
-        <div style="color:white;font-size:23px;font-weight:800;">
-            SMARTPROPERTY <span style="color:#C5A46D;">AI</span>
-            <div style="font-size:9px;letter-spacing:3px;color:#D5D5D5;">
+
+        <div style="
+            color:white;
+            font-size:21px;
+            font-weight:800;
+            letter-spacing:-0.5px;
+        ">
+            SMARTPROPERTY AI
+            <div style="
+                font-size:9px;
+                letter-spacing:3px;
+                color:rgba(255,255,255,0.82);
+                margin-top:5px;
+            ">
                 REAL ESTATE INTELLIGENCE
             </div>
         </div>
 
-        <div style="display:flex;gap:22px;flex-wrap:wrap;font-size:13px;">
-            <a href="#featured-properties" target="_parent" style="color:white;text-decoration:none;">Properties</a>
-            <a href="#ai-insights" target="_parent" style="color:white;text-decoration:none;">AI Insights</a>
-            <a href="#affordability" target="_parent" style="color:white;text-decoration:none;">Affordability</a>
-            <a href="#investment-analysis" target="_parent" style="color:white;text-decoration:none;">Investment</a>
+        <div style="
+            display:flex;
+            gap:20px;
+            flex-wrap:wrap;
+            font-size:13px;
+        ">
+            <a href="#featured-properties" target="_parent"
+               style="color:white;text-decoration:none;">Properties</a>
+
+            <a href="#ai-insights" target="_parent"
+               style="color:white;text-decoration:none;">AI Insights</a>
+
+            <a href="#affordability" target="_parent"
+               style="color:white;text-decoration:none;">Affordability</a>
+
+            <a href="#investment-analysis" target="_parent"
+               style="color:white;text-decoration:none;">Investment</a>
         </div>
     </div>
 
+    <!-- HERO TEXT -->
+
     <div style="
-        padding:75px 38px 85px;
-        max-width:750px;
+        padding:65px 40px 85px;
+        max-width:760px;
     ">
+
         <div style="
-            color:#D5B77E;
-            font-size:12px;
-            letter-spacing:4px;
-            font-weight:600;
-            margin-bottom:20px;
+            display:inline-block;
+            padding:9px 16px;
+            border:1px solid rgba(255,255,255,0.45);
+            border-radius:30px;
+            background:rgba(255,255,255,0.15);
+            backdrop-filter:blur(15px);
+            color:white;
+            font-size:11px;
+            letter-spacing:2px;
+            margin-bottom:22px;
         ">
-            SMARTER PROPERTY DECISIONS START HERE
+            ✦ SMART PROPERTY INTELLIGENCE
         </div>
 
         <div style="
             color:white;
-            font-size:clamp(34px,5vw,60px);
-            font-weight:750;
+            font-size:clamp(35px,5vw,62px);
+            font-weight:800;
             line-height:1.12;
-            letter-spacing:-1.5px;
+            letter-spacing:-2px;
             margin-bottom:20px;
+            text-shadow:0 3px 20px rgba(0,0,0,0.2);
         ">
             Find Your Dream Home.<br>
             Invest With Intelligence.
         </div>
 
         <div style="
-            color:#E1E4E8;
+            color:rgba(255,255,255,0.90);
             font-size:16px;
             line-height:1.8;
             max-width:570px;
@@ -509,19 +446,23 @@ st.components.v1.html("""
             make smarter real estate decisions with AI-powered insights.
         </div>
 
-        <a href="#featured-properties" style="
+        <a href="#featured-properties" target="_parent" style="
             display:inline-block;
-            background:#C5A46D;
-            color:#101827;
-            padding:15px 27px;
-            border-radius:4px;
+            padding:15px 26px;
+            border:1px solid rgba(255,255,255,0.85);
+            border-radius:17px;
+            background:rgba(255,255,255,0.27);
+            backdrop-filter:blur(22px);
+            -webkit-backdrop-filter:blur(22px);
+            color:white;
             text-decoration:none;
             font-size:13px;
             font-weight:750;
-            letter-spacing:0.5px;
+            box-shadow:inset 0 1px 2px rgba(255,255,255,0.8);
         ">
             EXPLORE PROPERTIES →
         </a>
+
     </div>
 </div>
 """, height=550, scrolling=False)
@@ -612,38 +553,41 @@ model = train_model(properties)
 
 with st.sidebar:
 
+    
     st.markdown(
         """
         <div style="
-            padding: 18px 15px;
-            margin-bottom: 18px;
-            border: 1px solid rgba(220,185,130,0.4);
-            border-radius: 18px;
-            background: linear-gradient(
-                135deg,
-                rgba(255,255,255,0.13),
-                rgba(255,255,255,0.04)
-            );
-            box-shadow: 0 8px 25px rgba(0,0,0,0.16);
+            padding:20px 16px;
+            margin-bottom:18px;
+            border:1px solid rgba(255,255,255,0.75);
+            border-radius:22px;
+            background:rgba(255,255,255,0.22);
+            backdrop-filter:blur(28px);
+            -webkit-backdrop-filter:blur(28px);
+            box-shadow:
+                0 10px 30px rgba(50,90,150,0.10),
+                inset 0 1px 2px rgba(255,255,255,0.9);
         ">
             <div style="
-                color:#D8B77E;
+                color:#397fc1;
                 font-size:11px;
                 letter-spacing:3px;
-                font-weight:700;
+                font-weight:750;
             ">
                 SMARTPROPERTY AI
             </div>
+
             <div style="
-                color:#FFF5E8;
+                color:#172b49;
                 font-size:23px;
-                font-weight:750;
+                font-weight:800;
                 margin-top:8px;
             ">
                 Property Details
             </div>
+
             <div style="
-                color:#D6C7B5;
+                color:#63758c;
                 font-size:12px;
                 margin-top:6px;
             ">
@@ -653,6 +597,7 @@ with st.sidebar:
         """,
         unsafe_allow_html=True
     )
+
 
     st.markdown("##### 📍 PROPERTY LOCATION")
 
