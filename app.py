@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
+import textwrap
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.pipeline import Pipeline
@@ -554,8 +555,9 @@ model = train_model(properties)
 with st.sidebar:
 
     
+
     st.markdown(
-        """
+        textwrap.dedent("""
         <div style="
             padding:20px 16px;
             margin-bottom:18px;
@@ -564,9 +566,8 @@ with st.sidebar:
             background:rgba(255,255,255,0.22);
             backdrop-filter:blur(28px);
             -webkit-backdrop-filter:blur(28px);
-            box-shadow:
-                0 10px 30px rgba(50,90,150,0.10),
-                inset 0 1px 2px rgba(255,255,255,0.9);
+            box-shadow:0 10px 30px rgba(50,90,150,0.10),
+                       inset 0 1px 2px rgba(255,255,255,0.9);
         ">
             <div style="
                 color:#397fc1;
@@ -594,8 +595,10 @@ with st.sidebar:
                 Configure your property to explore AI insights.
             </div>
         </div>
-        """,
+        """),
         unsafe_allow_html=True
+    )
+
     )
 
 
