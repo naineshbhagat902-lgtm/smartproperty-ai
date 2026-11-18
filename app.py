@@ -883,7 +883,7 @@ with detail2:
         unsafe_allow_html=True
     )
 
-                st.caption(
+                                st.caption(
                     f"🏗️ Building age: "
                     f"{float(prop['building_age']):.0f} years"
                 )
