@@ -815,19 +815,19 @@ else:
 
                 st.divider()
 
-                detail1, detail2 = st.columns(2)
+                             detail1, detail2 = st.columns(2)
 
-with detail1:
-    st.markdown(
-        f"""
-        <div style="
-            background:rgba(255,255,255,0.35);
-            border:1px solid rgba(255,255,255,0.7);
-            border-radius:18px;
-            padding:15px 10px;
-            width:100%;
-            min-height:100px;
-        ">
+                with detail1:
+                    st.markdown("**📐 Area**")
+                    st.write(
+                        f"{float(prop['area_sqft']):,.0f} sq.ft."
+                    )
+
+                with detail2:
+                    st.markdown("**💰 Monthly Rent**")
+                    st.write(
+                        f"₹{float(prop['monthly_rent']):,.0f}"
+                    )
             <div style="
                 font-size:12px;
                 color:#687991;
