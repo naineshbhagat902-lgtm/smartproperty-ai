@@ -1064,7 +1064,7 @@ if not comparison.empty:
         hide_index=True
     )
 
-      st.markdown("### 🏙️ Property Price Distribution")
+    st.markdown("### 🏙️ Property Price Distribution")
 
     fig = px.bar(
         comparison,
