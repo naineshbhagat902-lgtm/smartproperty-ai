@@ -69,36 +69,61 @@ h1, h2, h3, h4 {
     letter-spacing: -0.6px;
 }
 
-/* Sidebar */
+
+/* PREMIUM WALNUT GLASS SIDEBAR */
 section[data-testid="stSidebar"] {
-    background: var(--navy) !important;
-    border-right: 1px solid #26364A;
+    background:
+        linear-gradient(
+            145deg,
+            rgba(54, 39, 29, 0.97),
+            rgba(29, 25, 23, 0.96)
+        ) !important;
+    border-right: 1px solid rgba(218, 184, 128, 0.35);
+    box-shadow: 8px 0 35px rgba(20, 15, 10, 0.18);
 }
 
 section[data-testid="stSidebar"] > div {
-    padding: 2rem 1.3rem;
+    padding: 2rem 1.25rem;
 }
 
 section[data-testid="stSidebar"] h1,
 section[data-testid="stSidebar"] h2,
-section[data-testid="stSidebar"] h3,
-section[data-testid="stSidebar"] label {
-    color: var(--white) !important;
+section[data-testid="stSidebar"] h3 {
+    color: #F7EBDD !important;
+    font-weight: 700 !important;
 }
 
-/* Sidebar dropdowns */
+section[data-testid="stSidebar"] p,
+section[data-testid="stSidebar"] label,
+section[data-testid="stSidebar"] .stCaption {
+    color: #E5D7C5 !important;
+}
+
+/* Sidebar select boxes */
 section[data-testid="stSidebar"] [data-baseweb="select"] > div {
-    background: var(--navy-light) !important;
-    border: 1px solid #39485D !important;
-    border-radius: 8px !important;
+    background: rgba(255, 255, 255, 0.10) !important;
+    border: 1px solid rgba(235, 207, 164, 0.35) !important;
+    border-radius: 12px !important;
+    color: #FFFFFF !important;
+    backdrop-filter: blur(14px);
 }
 
 /* Sidebar number inputs */
 section[data-testid="stSidebar"] input {
-    background: var(--navy-light) !important;
-    color: var(--white) !important;
-    border: 1px solid #39485D !important;
-    border-radius: 8px !important;
+    background: rgba(255, 255, 255, 0.10) !important;
+    color: #FFFFFF !important;
+    border: 1px solid rgba(235, 207, 164, 0.35) !important;
+    border-radius: 12px !important;
+}
+
+/* Sidebar checkbox */
+section[data-testid="stSidebar"] [data-testid="stCheckbox"] label {
+    color: #F3E6D4 !important;
+}
+
+/* Sidebar widget spacing */
+section[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+    gap: 0.85rem;
 }
 
 /* Main content inputs */
@@ -323,6 +348,82 @@ hr {
     }
 }
 
+ 
+/* WALNUT AND CHAMPAGNE DASHBOARD BACKGROUND */
+.stApp {
+    background:
+        radial-gradient(
+            circle at 10% 10%,
+            rgba(190, 151, 103, 0.20),
+            transparent 35%
+        ),
+        radial-gradient(
+            circle at 90% 20%,
+            rgba(255, 255, 255, 0.75),
+            transparent 38%
+        ),
+        linear-gradient(
+            135deg,
+            #E9E0D4,
+            #F4F0E9 48%,
+            #E7DED2
+        ) !important;
+}
+
+/* GLASS DASHBOARD SECTIONS */
+[data-testid="stVerticalBlockBorderWrapper"] {
+    border: 1px solid rgba(255,255,255,0.78);
+    border-radius: 20px;
+    background: rgba(255,255,255,0.36);
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+    box-shadow:
+        0 10px 30px rgba(65,48,32,0.07),
+        inset 0 1px 0 rgba(255,255,255,0.8);
+}
+
+/* GLASS METRIC CARDS */
+[data-testid="stMetric"] {
+    background: rgba(255,255,255,0.60) !important;
+    border: 1px solid rgba(255,255,255,0.9) !important;
+    border-radius: 18px !important;
+    padding: 18px !important;
+    box-shadow: 0 8px 25px rgba(67,49,31,0.07);
+    backdrop-filter: blur(16px);
+}
+
+/* DASHBOARD HEADINGS */
+h1, h2, h3, h4 {
+    color: #38291F !important;
+    letter-spacing: -0.5px;
+}
+
+/* TABLE GLASS STYLE */
+[data-testid="stDataFrame"] {
+    border: 1px solid rgba(255,255,255,0.9);
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+/* BUTTONS */
+.stButton > button,
+.stDownloadButton > button,
+.stLinkButton > a {
+    background: linear-gradient(135deg, #59402D, #8B6845) !important;
+    color: #FFF8EE !important;
+    border: 1px solid #C5A46D !important;
+    border-radius: 12px !important;
+    padding: 0.7rem 1.2rem;
+    transition: all 0.25s ease;
+}
+
+.stButton > button:hover,
+.stDownloadButton > button:hover,
+.stLinkButton > a:hover {
+    background: #C5A46D !important;
+    color: #302319 !important;
+    transform: translateY(-2px);
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -504,19 +605,70 @@ if len(properties) < 5:
 
 model = train_model(properties)
 
-# Sidebar inputs
+
+# ==========================================
+# PREMIUM PROPERTY DETAILS SIDEBAR
+# ==========================================
+
 with st.sidebar:
-    st.header("🏠 Property details")
+
+    st.markdown(
+        """
+        <div style="
+            padding: 18px 15px;
+            margin-bottom: 18px;
+            border: 1px solid rgba(220,185,130,0.4);
+            border-radius: 18px;
+            background: linear-gradient(
+                135deg,
+                rgba(255,255,255,0.13),
+                rgba(255,255,255,0.04)
+            );
+            box-shadow: 0 8px 25px rgba(0,0,0,0.16);
+        ">
+            <div style="
+                color:#D8B77E;
+                font-size:11px;
+                letter-spacing:3px;
+                font-weight:700;
+            ">
+                SMARTPROPERTY AI
+            </div>
+            <div style="
+                color:#FFF5E8;
+                font-size:23px;
+                font-weight:750;
+                margin-top:8px;
+            ">
+                Property Details
+            </div>
+            <div style="
+                color:#D6C7B5;
+                font-size:12px;
+                margin-top:6px;
+            ">
+                Configure your property to explore AI insights.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    st.markdown("##### 📍 PROPERTY LOCATION")
 
     location = st.selectbox(
-    "City",
-    sorted(properties["city"].unique())
-)
+        "City",
+        sorted(properties["city"].unique())
+    )
 
     property_type = st.selectbox(
         "Property type",
         sorted(properties["property_type"].unique())
     )
+
+    st.divider()
+
+    st.markdown("##### 🏡 PROPERTY SPECIFICATIONS")
 
     price_lakh = st.number_input(
         "Asking price (₹ lakh)",
@@ -542,6 +694,10 @@ with st.sidebar:
         step=1
     )
 
+    st.divider()
+
+    st.markdown("##### 💰 RENTAL INFORMATION")
+
     monthly_rent = st.number_input(
         "Expected monthly rent (₹)",
         min_value=0,
@@ -550,9 +706,15 @@ with st.sidebar:
         step=1000
     )
 
+    st.divider()
+
     compare_location = st.checkbox(
         "Compare with selected location",
         value=True
+    )
+
+    st.caption(
+        "Your selections automatically update the property analysis."
     )
 
 # Calculations
