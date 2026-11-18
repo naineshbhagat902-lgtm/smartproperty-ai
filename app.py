@@ -815,23 +815,15 @@ else:
 
                 st.divider()
 
-                             detail1, detail2 = st.columns(2)
+                  detail1, detail2 = st.columns(2)
 
                 with detail1:
                     st.markdown("**📐 Area**")
-                    st.write(
-                        f"{float(prop['area_sqft']):,.0f} sq.ft."
-                    )
+                    st.write(f"{float(prop['area_sqft']):,.0f} sq.ft.")
 
                 with detail2:
                     st.markdown("**💰 Monthly Rent**")
-                    st.write(
-                        f"₹{float(prop['monthly_rent']):,.0f}"
-                    )
-            <div style="
-                font-size:12px;
-                color:#687991;
-                margin-bottom:8px;
+                    st.write(f"₹{float(prop['monthly_rent']):,.0f}")                  
             ">
                 📐 Area
             </div>
