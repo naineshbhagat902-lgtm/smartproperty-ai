@@ -957,7 +957,7 @@ st.markdown("## 🤖 AI price analysis")
 left, right = st.columns(2)
 
 with left:
-      st.markdown("### Estimated vs Asking Price")
+    st.markdown("### Estimated vs Asking Price")
 
     comparison_chart = pd.DataFrame({
         "Price Type": ["AI Estimate", "Asking Price"],
