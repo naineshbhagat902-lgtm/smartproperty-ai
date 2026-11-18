@@ -824,9 +824,7 @@ else:
                 with detail2:
                     st.markdown("**💰 Monthly Rent**")
                     st.write(f"₹{float(prop['monthly_rent']):,.0f}")                  
-            ">
-                📐 Area
-            </div>
+            
 
             <div style="
                 font-size:21px;
