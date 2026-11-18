@@ -1,116 +1,174 @@
-
 # 🏡 SmartProperty AI
 
-### Intelligent Property Price & Rental Analysis
-
-A modern real estate analysis project built using Python and Streamlit.
-
----
-
 <p align="center">
-
-**🚀 [OPEN LIVE APPLICATION](https://smartproperty-ai-4phagzfqbappxqsqq4adne.streamlit.app/)**
-
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:050816,40:102A43,100:00D9FF&height=230&section=header&text=SMARTPROPERTY%20AI&fontSize=43&fontColor=FFFFFF&animation=fadeIn&fontAlignY=38&desc=Next-Generation%20Real%20Estate%20Analytics&descSize=16&descAlignY=60" width="100%" />
 </p>
 
-![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)
-![Pandas](https://img.shields.io/badge/Pandas-150458?style=for-the-badge&logo=pandas&logoColor=white)
+<p align="center">
+  <img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=600&size=19&duration=3000&pause=900&color=00D9FF&center=true&vCenter=true&width=650&lines=Intelligent+Property+Price+Analysis;Explore+Rental+Insights;Python+%7C+Streamlit+%7C+Data+Analytics;Building+Smarter+Real+Estate+Technology" alt="Animated typing text" />
+</p>
+
+<p align="center">
+  <a href="https://smartproperty-ai-4phagzfqbappxqsqq4adne.streamlit.app/">
+    <img src="https://img.shields.io/badge/🚀_EXPLORE_LIVE_APP-00CFFF?style=for-the-badge&logo=streamlit&logoColor=white" />
+  </a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Pandas-150458?style=for-the-badge&logo=pandas&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Domain-Real%20Estate-00BFA6?style=for-the-badge"/>
+</p>
 
 ---
 
-## ✨ About the Project
+## ◈ ABOUT THE PROJECT
 
-**SmartProperty AI** is a real estate analysis application designed to make property price and rental analysis easier and more accessible.
+**SmartProperty AI** is a real estate analysis application built using Python and Streamlit.
 
-Built with Python and Streamlit, this project demonstrates how technology and data analysis can help users explore property-related information.
+It explores how programming and data analysis can make property price and rental information easier to understand through an interactive web experience.
 
-## 🎯 Project Objectives
+<p align="center">
+  <img src="https://capsule-render.vercel.app/api?type=rect&color=0:07111F,100:00D9FF&height=2&section=header" width="90%"/>
+</p>
 
-- Simplify property price analysis.
-- Explore rental information.
-- Build an interactive web application.
-- Apply Python programming to real-world property problems.
+## ✨ CORE FEATURES
 
-## 🛠️ Technology Stack
+<table>
+<tr>
+<td width="50%" align="center">
+
+### 🏠 PROPERTY ANALYSIS
+
+Explore property-related price information and comparisons.
+
+</td>
+<td width="50%" align="center">
+
+### 💰 RENTAL INSIGHTS
+
+Explore rental information and property data.
+
+</td>
+</tr>
+<tr>
+<td width="50%" align="center">
+
+### 📊 DATA EXPLORATION
+
+Work with structured property datasets.
+
+</td>
+<td width="50%" align="center">
+
+### 🤖 AI & TECHNOLOGY
+
+Explore real-world applications of programming and AI concepts.
+
+</td>
+</tr>
+</table>
+
+## ⚡ TECHNOLOGY STACK
+
+<p align="center">
+  <img src="https://skillicons.dev/icons?i=python&theme=dark" height="55"/>
+  <img src="https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white" height="28"/>
+  <img src="https://skillicons.dev/icons?i=pandas&theme=dark" height="55"/>
+</p>
 
 | Technology | Purpose |
-|---|---|
+|:---|:---|
 | Python | Core programming |
-| Streamlit | Web application |
-| Pandas | Data handling |
-| CSV | Sample property data |
+| Streamlit | Interactive web interface |
+| Pandas | Data processing |
+| CSV | Sample property dataset |
 
-## 📂 Project Structure
+## 🧊 PROJECT ARCHITECTURE
 
 ```text
 SmartProperty-AI/
 │
 ├── app.py
 ├── train_model.py
+│
 ├── data/
 │   └── properties.csv
+│
 ├── requirements.txt
 └── README.md
 ```
 
-## ⚙️ Installation & Setup
+## 🚀 RUN LOCALLY
 
-**1. Clone the repository**
+**Step 1 — Clone the repository**
 
 ```bash
 git clone YOUR_GITHUB_REPOSITORY_URL
 ```
 
-**2. Enter the project directory**
+**Step 2 — Enter the project folder**
 
 ```bash
 cd smartproperty-ai
 ```
 
-**3. Install dependencies**
+**Step 3 — Install dependencies**
 
 ```bash
 pip install -r requirements.txt
 ```
 
-**4. Run the application**
+**Step 4 — Launch the application**
 
 ```bash
 streamlit run app.py
 ```
 
-## 🌐 Live Demo
+## 🌐 LIVE APPLICATION
 
-Experience SmartProperty AI:
+<p align="center">
+  <a href="https://smartproperty-ai-4phagzfqbappxqsqq4adne.streamlit.app/">
+    <img src="https://img.shields.io/badge/LAUNCH_SMARTPROPERTY_AI-Open%20Application-00D9FF?style=for-the-badge&logo=streamlit&logoColor=white"/>
+  </a>
+</p>
 
-**[🚀 Launch SmartProperty AI](https://smartproperty-ai-4phagzfqbappxqsqq4adne.streamlit.app/)**
-
-## 🚀 Deployment
-
-This project is deployed using Streamlit Community Cloud.
-
-1. Upload the project to GitHub.
-2. Visit [Streamlit Community Cloud](https://share.streamlit.io/).
-3. Connect your GitHub repository.
-4. Select your repository and branch.
-5. Select `app.py`.
-6. Deploy your application.
-
-## 📊 Dataset Information
+## 📊 DATASET INFORMATION
 
 The project uses illustrative property data for demonstration and educational purposes.
 
-The sample data should not be considered verified real estate market information.
+**Disclaimer:** Sample data should not be considered verified real estate market information or official property valuations.
 
-## 💡 Project Vision
+## 🔭 FUTURE VISION
 
-SmartProperty AI explores the possibilities of combining programming, data analysis, and artificial intelligence concepts to make property-related information easier to understand.
+SmartProperty AI explores the potential of combining:
+
+- Artificial Intelligence
+- Machine Learning
+- Real Estate Analytics
+- Property Price Prediction
+- Rental Analysis
+- Data-Driven Decision Making
+
+The long-term vision is to explore smarter ways to understand property markets through technology.
 
 ---
 
-### 🏡 SMARTPROPERTY AI
+<p align="center">
+  <img src="https://capsule-render.vercel.app/api?type=rect&color=0:00D9FF,50:102A43,100:050816&height=3" width="100%"/>
+</p>
 
-*Building smarter ways to explore real estate.*
+<p align="center">
+  <img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=600&size=17&duration=3000&pause=1000&color=00D9FF&center=true&vCenter=true&width=500&lines=BUILDING+SMARTER+REAL+ESTATE;POWERED+BY+PYTHON+%26+DATA" />
+</p>
 
-**Developed with Python & Streamlit.**
+<p align="center">
+  <strong>🏡 SMARTPROPERTY AI</strong><br/>
+  <i>Building smarter ways to explore real estate.</i><br/><br/>
+  Developed with Python & Streamlit
+</p>
+
+<p align="center">
+  <sub>© SmartProperty AI | Educational Project</sub>
+</p>
