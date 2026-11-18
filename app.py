@@ -555,49 +555,34 @@ model = train_model(properties)
 with st.sidebar:
 
     
-
     st.markdown(
-        textwrap.dedent("""
-        <div style="
-            padding:20px 16px;
-            margin-bottom:18px;
-            border:1px solid rgba(255,255,255,0.75);
-            border-radius:22px;
-            background:rgba(255,255,255,0.22);
-            backdrop-filter:blur(28px);
-            -webkit-backdrop-filter:blur(28px);
-            box-shadow:0 10px 30px rgba(50,90,150,0.10),
-                       inset 0 1px 2px rgba(255,255,255,0.9);
-        ">
-            <div style="
-                color:#397fc1;
-                font-size:11px;
-                letter-spacing:3px;
-                font-weight:750;
-            ">
-                SMARTPROPERTY AI
-            </div>
-
-            <div style="
-                color:#172b49;
-                font-size:23px;
-                font-weight:800;
-                margin-top:8px;
-            ">
-                Property Details
-            </div>
-
-            <div style="
-                color:#63758c;
-                font-size:12px;
-                margin-top:6px;
-            ">
-                Configure your property to explore AI insights.
-            </div>
-        </div>
-        """),
+        """
+<div style="
+    background: rgba(255,255,255,0.30);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border: 1px solid rgba(255,255,255,0.7);
+    border-radius: 22px;
+    padding: 22px 16px;
+    margin-bottom: 18px;
+    box-shadow: 0 8px 30px rgba(50,100,160,0.12);
+">
+    <div style="color:#377fc1;font-size:12px;
+                font-weight:800;letter-spacing:3px;">
+        SMARTPROPERTY AI
+    </div>
+    <div style="color:#172b49;font-size:23px;
+                font-weight:800;margin-top:12px;">
+        Property Details
+    </div>
+    <div style="color:#63758c;font-size:12px;margin-top:8px;">
+        Configure your property to explore AI insights.
+    </div>
+</div>
+        """,
         unsafe_allow_html=True
     )
+
 
 
 
