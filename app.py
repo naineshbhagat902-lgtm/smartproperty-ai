@@ -815,7 +815,7 @@ else:
 
                 st.divider()
 
-                  detail1, detail2 = st.columns(2)
+                detail1, detail2 = st.columns(2)
 
                 with detail1:
                     st.markdown("**📐 Area**")
