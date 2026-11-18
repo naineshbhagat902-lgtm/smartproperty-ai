@@ -826,52 +826,6 @@ else:
                     st.write(f"₹{float(prop['monthly_rent']):,.0f}")                  
             
 
-            <div style="
-                font-size:21px;
-                font-weight:800;
-                color:#17243a;
-                white-space:normal;
-                overflow-wrap:anywhere;
-            ">
-                {float(prop['area_sqft']):,.0f} sq.ft.
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-with detail2:
-    st.markdown(
-        f"""
-        <div style="
-            background:rgba(255,255,255,0.35);
-            border:1px solid rgba(255,255,255,0.7);
-            border-radius:18px;
-            padding:15px 10px;
-            width:100%;
-            min-height:100px;
-        ">
-            <div style="
-                font-size:12px;
-                color:#687991;
-                margin-bottom:8px;
-            ">
-                💰 Monthly Rent
-            </div>
-
-            <div style="
-                font-size:21px;
-                font-weight:800;
-                color:#17243a;
-                white-space:normal;
-                overflow-wrap:anywhere;
-            ">
-                ₹{float(prop['monthly_rent']):,.0f}
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
 st.caption(
     f"🏗️ Building age: "
     f"{float(prop['building_age']):.0f} years"
