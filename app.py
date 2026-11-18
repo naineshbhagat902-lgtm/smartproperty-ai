@@ -1608,7 +1608,7 @@ st.subheader("📊 8. Visual Financial Analysis")
 chart1, chart2 = st.columns(2)
 
 with chart1:
-with chart1:
+
 
     st.markdown("#### 🏦 Loan Principal vs Interest")
 
