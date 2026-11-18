@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import plotly.express as px
+import plotly.graph_objects as go
 from pathlib import Path
 import textwrap
 from sklearn.compose import ColumnTransformer
@@ -955,13 +957,50 @@ st.markdown("## 🤖 AI price analysis")
 left, right = st.columns(2)
 
 with left:
-    st.markdown("### Estimated vs asking price")
-    comparison_chart = pd.DataFrame({
-        "Price type": ["ML estimate", "Asking price"],
-        "Price (₹ lakh)": [predicted_lakh, price_lakh]
-    }).set_index("Price type")
+      st.markdown("### Estimated vs Asking Price")
 
-    st.bar_chart(comparison_chart)
+    comparison_chart = pd.DataFrame({
+        "Price Type": ["AI Estimate", "Asking Price"],
+        "Price (₹ lakh)": [predicted_lakh, price_lakh]
+    })
+
+    fig = px.bar(
+        comparison_chart,
+        x="Price Type",
+        y="Price (₹ lakh)",
+        color="Price Type",
+        text="Price (₹ lakh)",
+        color_discrete_sequence=["#60A5FA", "#A78BFA"]
+    )
+
+    fig.update_traces(
+        marker_line_width=0,
+        texttemplate="₹%{y:.2f} L",
+        textposition="outside",
+        marker_cornerradius=12
+    )
+
+    fig.update_layout(
+        paper_bgcolor="rgba(255,255,255,0)",
+        plot_bgcolor="rgba(255,255,255,0)",
+        font=dict(color="#243B53", size=14),
+        showlegend=False,
+        height=400,
+        margin=dict(l=20, r=20, t=40, b=20),
+        yaxis=dict(
+            showgrid=True,
+            gridcolor="rgba(100,140,200,0.15)",
+            zeroline=False
+        ),
+        xaxis=dict(showgrid=False),
+        bargap=0.45
+    )
+
+    st.plotly_chart(
+        fig,
+        use_container_width=True,
+        config={"displayModeBar": False}
+    )
 
 with right:
     st.markdown("### Assessment")
@@ -1025,18 +1064,48 @@ if not comparison.empty:
         hide_index=True
     )
 
-    st.markdown("### Sample price distribution")
-    fig, ax = plt.subplots()
-    ax.bar(
-        comparison["property_name"],
-        comparison["price_lakh"]
+      st.markdown("### 🏙️ Property Price Distribution")
+
+    fig = px.bar(
+        comparison,
+        x="property_name",
+        y="price_lakh",
+        color="price_lakh",
+        color_continuous_scale=["#60A5FA", "#A78BFA", "#6366F1"],
+        labels={
+            "property_name": "Property",
+            "price_lakh": "Price (₹ lakh)"
+        },
+        text="price_lakh"
     )
-    ax.set_xlabel("Sample property")
-    ax.set_ylabel("Price (₹ lakh)")
-    ax.tick_params(axis="x", rotation=35)
-    fig.tight_layout()
-    st.pyplot(fig)
-    plt.close(fig)
+
+    fig.update_traces(
+        marker_line_width=0,
+        texttemplate="₹%{y:.1f} L",
+        textposition="outside",
+        marker_cornerradius=10
+    )
+
+    fig.update_layout(
+        paper_bgcolor="rgba(255,255,255,0)",
+        plot_bgcolor="rgba(255,255,255,0)",
+        font=dict(color="#243B53", size=13),
+        height=450,
+        margin=dict(l=20, r=20, t=40, b=30),
+        coloraxis_showscale=False,
+        xaxis=dict(showgrid=False),
+        yaxis=dict(
+            showgrid=True,
+            gridcolor="rgba(100,140,200,0.15)"
+        ),
+        bargap=0.35
+    )
+
+    st.plotly_chart(
+        fig,
+        use_container_width=True,
+        config={"displayModeBar": False}
+    )
 else:
     st.info("No comparable properties found for this selection.")
 
@@ -1539,46 +1608,124 @@ st.subheader("📊 8. Visual Financial Analysis")
 chart1, chart2 = st.columns(2)
 
 with chart1:
+with chart1:
 
-    st.markdown("#### Loan Principal vs Interest")
+    st.markdown("#### 🏦 Loan Principal vs Interest")
 
-    fig1, ax1 = plt.subplots()
+    loan_data = pd.DataFrame({
+        "Category": ["Loan Principal", "Total Interest"],
+        "Amount": [
+            estimated_loan,
+            max(0, total_interest)
+        ]
+    })
 
-    ax1.pie(
-        [estimated_loan, max(0, total_interest)],
-        labels=["Loan Principal", "Interest"],
-        autopct="%1.1f%%",
-        startangle=90
+    fig1 = px.pie(
+        loan_data,
+        names="Category",
+        values="Amount",
+        hole=0.65,
+        color="Category",
+        color_discrete_sequence=["#60A5FA", "#A78BFA"]
     )
 
-    ax1.axis("equal")
-    st.pyplot(fig1)
-    plt.close(fig1)
+    fig1.update_traces(
+        textinfo="percent",
+        textfont_size=15,
+        marker=dict(
+            line=dict(
+                color="rgba(255,255,255,0.8)",
+                width=3
+            )
+        ),
+        hovertemplate=(
+            "<b>%{label}</b><br>"
+            "Amount: ₹%{value:,.0f}<br>"
+            "Percentage: %{percent}"
+            "<extra></extra>"
+        )
+    )
+
+    fig1.update_layout(
+        paper_bgcolor="rgba(255,255,255,0)",
+        plot_bgcolor="rgba(255,255,255,0)",
+        font=dict(color="#243B53", size=13),
+        height=400,
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            y=-0.08,
+            x=0.5,
+            xanchor="center"
+        ),
+        margin=dict(l=15, r=15, t=30, b=30)
+    )
+
+    st.plotly_chart(
+        fig1,
+        use_container_width=True,
+        config={"displayModeBar": False}
+    )
+  
 
 with chart2:
 
-    st.markdown("#### Monthly Expense Breakdown")
+    st.markdown("#### 💳 Monthly Expense Breakdown")
 
-    expense_data = pd.Series({
-        "New Home EMI": estimated_emi,
-        "Existing EMIs": existing_emi,
-        "Maintenance": monthly_maintenance
+    expense_data = pd.DataFrame({
+        "Expense": [
+            "New Home EMI",
+            "Existing EMIs",
+            "Maintenance"
+        ],
+        "Amount": [
+            estimated_emi,
+            existing_emi,
+            monthly_maintenance
+        ]
     })
 
-    fig2, ax2 = plt.subplots()
-
-    expense_data.plot(
-        kind="bar",
-        ax=ax2
+    fig2 = px.bar(
+        expense_data,
+        x="Amount",
+        y="Expense",
+        orientation="h",
+        color="Expense",
+        text="Amount",
+        color_discrete_sequence=[
+            "#60A5FA",
+            "#A78BFA",
+            "#34D399"
+        ]
     )
 
-    ax2.set_ylabel("Amount (₹)")
-    ax2.set_xlabel("Monthly Expenses")
-    ax2.tick_params(axis="x", rotation=15)
+    fig2.update_traces(
+        texttemplate="₹%{x:,.0f}",
+        textposition="outside",
+        marker_line_width=0
+    )
 
-    fig2.tight_layout()
-    st.pyplot(fig2)
-    plt.close(fig2)
+    fig2.update_layout(
+        paper_bgcolor="rgba(255,255,255,0)",
+        plot_bgcolor="rgba(255,255,255,0)",
+        font=dict(color="#243B53", size=13),
+        showlegend=False,
+        height=400,
+        margin=dict(l=20, r=50, t=30, b=20),
+        xaxis=dict(
+            title="Monthly Amount (₹)",
+            showgrid=True,
+            gridcolor="rgba(100,140,200,0.15)"
+        ),
+        yaxis=dict(showgrid=False)
+    )
+
+    st.plotly_chart(
+        fig2,
+        use_container_width=True,
+        config={"displayModeBar": False}
+    )
+    
 
 # =====================================================
 # 10. FINANCIAL RECOMMENDATION
