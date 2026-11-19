@@ -5,6 +5,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 from pathlib import Path
 import textwrap
+import asyncio
+import json
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.pipeline import Pipeline
@@ -323,7 +325,68 @@ hr {
 
 
 BASE_DIR = Path(__file__).parent
-DATA_FILE = BASE_DIR / "data" / "properties.csv"
+# Support the normal project path and the CSV filename uploaded for this update.
+DATA_CANDIDATES = [
+    BASE_DIR / "data" / "properties.csv",
+    BASE_DIR / "properties.csv",
+    BASE_DIR / "properties-3.csv",
+]
+DATA_FILE = next((path for path in DATA_CANDIDATES if path.is_file()), DATA_CANDIDATES[0])
+
+SQUAREYARDS_MCP_URL = "https://sy-mcp.squareyards.com/mcp/external"
+
+
+async def _squareyards_call_async(tool_name, arguments):
+    """Call Square Yards' public, read-only MCP endpoint (no API key required)."""
+    from mcp import ClientSession
+    from mcp.client.streamable_http import streamablehttp_client
+
+    async with streamablehttp_client(SQUAREYARDS_MCP_URL) as (read_stream, write_stream, _):
+        async with ClientSession(read_stream, write_stream) as session:
+            await session.initialize()
+            result = await session.call_tool(tool_name, arguments=arguments)
+
+            if getattr(result, "isError", False):
+                messages = [getattr(item, "text", "") for item in (result.content or [])]
+                raise RuntimeError("; ".join(message for message in messages if message) or "Square Yards returned an error.")
+
+            structured = getattr(result, "structuredContent", None)
+            if structured is not None:
+                return structured
+
+            for item in (result.content or []):
+                item_text = getattr(item, "text", None)
+                if item_text:
+                    try:
+                        return json.loads(item_text)
+                    except json.JSONDecodeError:
+                        return {"message": item_text}
+            return {}
+
+
+@st.cache_data(ttl=900, show_spinner=False)
+def squareyards_search(tool_name, arguments_json):
+    """Cache identical searches for 15 minutes to avoid unnecessary requests."""
+    arguments = json.loads(arguments_json)
+    return asyncio.run(_squareyards_call_async(tool_name, arguments))
+
+
+def _extract_squareyards_rows(payload, preferred_keys):
+    """Handle MCP structured output and JSON/text-wrapped output safely."""
+    if not isinstance(payload, dict):
+        return []
+    for key in preferred_keys:
+        value = payload.get(key)
+        if isinstance(value, list):
+            return value
+    # Some MCP servers wrap the useful response in a result/data property.
+    for key in ("data", "result", "structuredContent"):
+        nested = payload.get(key)
+        if isinstance(nested, dict):
+            rows = _extract_squareyards_rows(nested, preferred_keys)
+            if rows:
+                return rows
+    return []
 
 
 
@@ -684,6 +747,148 @@ st.markdown("## Property Dashboard")
 st.caption(
     "Your intelligent real estate dashboard powered by "
     "machine learning and property data analytics."
+)
+
+# ==========================================
+# SQUARE YARDS LIVE PROPERTY SEARCH (INDIA)
+# ==========================================
+st.divider()
+st.markdown("## 🌐 Explore Properties Across India")
+st.caption(
+    "Search Square Yards' property database for sale listings, rentals, "
+    "and new projects in Indian cities. No API key is required."
+)
+
+with st.container(border=True):
+    live_col1, live_col2, live_col3 = st.columns([1.25, 1, 1])
+    with live_col1:
+        live_city = st.text_input(
+            "City or locality in India",
+            value="Mumbai",
+            placeholder="e.g. Pune, Bengaluru, Thane, Jaipur"
+        ).strip()
+    with live_col2:
+        live_search_type = st.selectbox(
+            "What are you looking for?",
+            ["Properties for sale", "Properties for rent", "New projects"]
+        )
+    with live_col3:
+        live_bhk = st.selectbox(
+            "Configuration",
+            ["Any", "1 BHK", "2 BHK", "3 BHK", "4 BHK", "5 BHK"]
+        )
+
+    budget_col1, budget_col2, budget_col3 = st.columns(3)
+    with budget_col1:
+        live_min_budget_lakh = st.number_input(
+            "Minimum budget (₹ lakh)", min_value=0, max_value=100000,
+            value=0, step=5
+        )
+    with budget_col2:
+        live_max_budget_lakh = st.number_input(
+            "Maximum budget (₹ lakh)", min_value=0, max_value=100000,
+            value=200, step=5
+        )
+    with budget_col3:
+        live_result_count = st.selectbox("Results", [5, 10, 20, 30], index=1)
+
+    run_live_search = st.button(
+        "🔎 Search Square Yards", type="primary", use_container_width=True
+    )
+
+    if run_live_search:
+        if not live_city:
+            st.warning("Enter an Indian city or locality to search.")
+        elif live_max_budget_lakh and live_min_budget_lakh > live_max_budget_lakh:
+            st.warning("Minimum budget cannot be greater than maximum budget.")
+        else:
+            # Square Yards accepts absolute INR values, not lakh values.
+            min_price = int(live_min_budget_lakh * 100000) if live_min_budget_lakh else None
+            max_price = int(live_max_budget_lakh * 100000) if live_max_budget_lakh else None
+            bhk_value = live_bhk if live_bhk != "Any" else None
+
+            if live_search_type == "New projects":
+                tool_name = "search_projects"
+                args = {"location": live_city, "page": 1, "paging": int(live_result_count)}
+                if bhk_value:
+                    args["bhk"] = bhk_value.replace(" BHK", "")
+                if min_price is not None:
+                    args["minPrice"] = min_price
+                if max_price is not None:
+                    args["maxPrice"] = max_price
+                preferred_keys = ["projects"]
+            else:
+                tool_name = "search_properties"
+                args = {
+                    "listingType": "Sale" if live_search_type == "Properties for sale" else "Rent",
+                    "location": live_city,
+                    "page": 1,
+                    "size": int(live_result_count),
+                }
+                if bhk_value:
+                    args["bedrooms"] = bhk_value
+                if min_price is not None:
+                    args["minPrice" if tool_name == "search_properties" else "minPrice"] = min_price
+                if max_price is not None:
+                    args["maxPrice"] = max_price
+                preferred_keys = ["listings"]
+
+            # A budget of zero is treated as an omitted lower bound.
+            args = {key: value for key, value in args.items() if value is not None}
+            try:
+                with st.spinner("Searching Square Yards property data..."):
+                    live_payload = squareyards_search(tool_name, json.dumps(args, sort_keys=True))
+                live_rows = _extract_squareyards_rows(live_payload, preferred_keys)
+
+                if live_rows:
+                    total_count = live_payload.get("total", len(live_rows)) if isinstance(live_payload, dict) else len(live_rows)
+                    st.success(f"Found {total_count} result(s). Showing up to {len(live_rows)}.")
+                    for row_start in range(0, len(live_rows), 2):
+                        card_cols = st.columns(2)
+                        for card_col, item in zip(card_cols, live_rows[row_start:row_start + 2]):
+                            with card_col:
+                                title = item.get("title") or item.get("name") or "Property listing"
+                                place = ", ".join(str(x) for x in [item.get("locality"), item.get("city")] if x)
+                                price = item.get("priceText") or item.get("price")
+                                if isinstance(price, (int, float)):
+                                    price = f"₹{price:,.0f}"
+                                area_value = item.get("areaSqft") or item.get("areaText")
+                                details = []
+                                if item.get("bhk"):
+                                    details.append(f"{item.get('bhk')} BHK")
+                                if area_value:
+                                    details.append(f"{area_value} sq.ft." if isinstance(area_value, (int, float)) else str(area_value))
+                                if item.get("pricePerSqft") is not None:
+                                    try:
+                                        details.append(f"₹{float(item.get('pricePerSqft')):,.0f}/sq.ft.")
+                                    except (TypeError, ValueError):
+                                        details.append(f"{item.get('pricePerSqft')}/sq.ft.")
+                                st.markdown(f"**{title}**")
+                                if place:
+                                    st.caption(f"📍 {place}")
+                                if price is not None:
+                                    st.markdown(f"### {price}")
+                                if details:
+                                    st.write(" · ".join(details))
+                                if item.get("isVerified") is True:
+                                    st.caption("✓ Square Yards verified listing")
+                                listing_url = item.get("url") or item.get("link") or item.get("propertyUrl") or item.get("detailUrl")
+                                if listing_url and str(listing_url).startswith("https://"):
+                                    st.link_button("View listing", listing_url, use_container_width=True)
+                                st.divider()
+                else:
+                    message = live_payload.get("message") or live_payload.get("note") if isinstance(live_payload, dict) else None
+                    st.info(message or "No matching results were returned. Try a broader city/locality or remove the budget limit.")
+            except ImportError:
+                st.error("Square Yards connection package is missing. Install the updated requirements.txt and redeploy the app.")
+            except Exception as error:
+                st.error(f"Square Yards search could not be completed: {error}")
+                st.caption("Your existing CSV dashboard is still available. Please retry in a moment.")
+
+st.caption(
+    "Data note: Square Yards listings are informational and may not reflect "
+    "current availability or final transaction prices. Verify details with the listing provider. "
+    "Your CSV-based AI estimate is a separate sample-data model, not a live market valuation."
 )
 
 # ==========================================
