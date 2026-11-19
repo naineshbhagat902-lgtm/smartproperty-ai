@@ -336,6 +336,54 @@ DATA_FILE = next((path for path in DATA_CANDIDATES if path.is_file()), DATA_CAND
 SQUAREYARDS_MCP_URL = "https://sy-mcp.squareyards.com/mcp/external"
 
 
+def normalize_squareyards_location(value):
+    """Normalize common city spellings before sending them to Square Yards."""
+    raw = str(value or "").strip()
+    aliases = {
+        "benguluru": "Bengaluru",
+        "bangalore": "Bengaluru",
+        "bengaluru": "Bengaluru",
+        "gurgaon": "Gurugram",
+        "new delhi": "Delhi",
+        "bombay": "Mumbai",
+        "madras": "Chennai",
+        "calcutta": "Kolkata",
+    }
+    return aliases.get(raw.casefold(), raw)
+
+
+def _find_listing_image(value, depth=0, image_context=False):
+    """Find an HTTP(S) URL only when it belongs to a photo/image field."""
+    if depth > 8:
+        return None
+    image_keys = {
+        "image", "images", "imageurl", "image_url", "thumbnail",
+        "coverimage", "cover_image", "photourl", "photo_url",
+        "photos", "gallery", "media", "propertyimages", "property_images",
+    }
+    if isinstance(value, str):
+        if image_context and value.startswith(("https://", "http://")):
+            return value
+        return None
+    if isinstance(value, list):
+        for item in value:
+            found = _find_listing_image(item, depth + 1, image_context)
+            if found:
+                return found
+    elif isinstance(value, dict):
+        for key, item in value.items():
+            normalized_key = str(key).replace("-", "_").casefold()
+            compact_key = normalized_key.replace("_", "")
+            is_image_field = (
+                normalized_key in image_keys
+                or compact_key in {k.replace("_", "") for k in image_keys}
+            )
+            found = _find_listing_image(item, depth + 1, image_context or is_image_field)
+            if found:
+                return found
+    return None
+
+
 async def _squareyards_call_async(tool_name, arguments):
     """Call Square Yards' public, read-only MCP endpoint (no API key required)."""
     from mcp import ClientSession
@@ -369,6 +417,15 @@ def squareyards_search(tool_name, arguments_json):
     """Cache identical searches for 15 minutes to avoid unnecessary requests."""
     arguments = json.loads(arguments_json)
     return asyncio.run(_squareyards_call_async(tool_name, arguments))
+
+
+@st.cache_data(ttl=900, show_spinner=False)
+def squareyards_listing_details(property_id):
+    """Fetch one listing's full record so its genuine photo can be displayed if supplied."""
+    return asyncio.run(_squareyards_call_async(
+        "get_entity_details",
+        {"entity": "listing", "id": str(property_id)}
+    ))
 
 
 def _extract_squareyards_rows(payload, preferred_keys):
@@ -777,7 +834,7 @@ with st.container(border=True):
     with live_col1:
         live_city = st.text_input(
             "City or locality in India",
-            value="Mumbai",
+            value=location,
             placeholder="e.g. Pune, Bengaluru, Thane, Jaipur"
         ).strip()
     with live_col2:
@@ -815,7 +872,8 @@ with st.container(border=True):
         elif live_max_budget_lakh and live_min_budget_lakh > live_max_budget_lakh:
             st.warning("Minimum budget cannot be greater than maximum budget.")
         else:
-            # Square Yards accepts absolute INR values, not lakh values.
+            # Normalize common spelling variants (e.g. "benguluru") and convert lakh to INR.
+            live_city = normalize_squareyards_location(live_city)
             min_price = int(live_min_budget_lakh * 100000) if live_min_budget_lakh else None
             max_price = int(live_max_budget_lakh * 100000) if live_max_budget_lakh else None
             bhk_value = live_bhk if live_bhk != "Any" else None
@@ -855,7 +913,7 @@ with st.container(border=True):
 
                 if live_rows:
                     total_count = live_payload.get("total", len(live_rows)) if isinstance(live_payload, dict) else len(live_rows)
-                    st.success(f"Found {total_count} result(s). Showing up to {len(live_rows)}.")
+                    st.success(f"Found {total_count} result(s) for {live_city}. Showing up to {len(live_rows)}.")
                     for row_start in range(0, len(live_rows), 2):
                         card_cols = st.columns(2)
                         for card_col, item in zip(card_cols, live_rows[row_start:row_start + 2]):
@@ -876,15 +934,25 @@ with st.container(border=True):
                                         details.append(f"₹{float(item.get('pricePerSqft')):,.0f}/sq.ft.")
                                     except (TypeError, ValueError):
                                         details.append(f"{item.get('pricePerSqft')}/sq.ft.")
-                                photo_url = (
-                                    item.get("imageUrl") or item.get("image_url")
-                                    or item.get("thumbnail") or item.get("coverImage")
-                                    or item.get("image")
-                                )
-                                if isinstance(photo_url, dict):
-                                    photo_url = photo_url.get("url") or photo_url.get("src")
-                                if isinstance(photo_url, str) and photo_url.startswith(("https://", "http://")):
+                                photo_url = _find_listing_image(item)
+                                # Search cards may omit photos; request the full listing detail as a second step.
+                                listing_id = item.get("id") or item.get("propertyId") or item.get("propertyid")
+                                if not photo_url and listing_id:
+                                    try:
+                                        detail_payload = squareyards_listing_details(listing_id)
+                                        photo_url = _find_listing_image(detail_payload)
+                                    except Exception:
+                                        photo_url = None
+                                if photo_url:
                                     st.image(photo_url, use_container_width=True)
+                                else:
+                                    st.markdown(
+                                        "<div style='height:180px;border-radius:14px;background:rgba(255,255,255,.48);"
+                                        "border:1px solid rgba(255,255,255,.8);display:flex;align-items:center;"
+                                        "justify-content:center;color:#687991;font-weight:600;'>"
+                                        "Genuine listing photo not supplied by source</div>",
+                                        unsafe_allow_html=True
+                                    )
                                 st.markdown(f"**{title}**")
                                 if place:
                                     st.caption(f"📍 {place}")
@@ -910,7 +978,8 @@ with st.container(border=True):
 st.caption(
     "Data note: Square Yards listings are informational and may not reflect "
     "current availability or final transaction prices. Verify details with the listing provider. "
-    "Your CSV-based AI estimate is a separate sample-data model, not a live market valuation."
+    "Your CSV-based AI estimate is a separate sample-data model, not a live market valuation. "
+    "Listing photos appear only when Square Yards supplies a genuine photo URL; missing photos are not fabricated."
 )
 
 # ==========================================
