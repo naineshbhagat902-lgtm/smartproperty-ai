@@ -551,19 +551,43 @@ def load_data():
     df = df.dropna(subset=required).copy()
     df = df[df["area_sqft"] > 0].copy()
 
-    # Group individual localities into their main cities
-    location_text = df["location"].astype(str).str.strip().str.lower()
+    # Detect common Indian cities from the locality/address text.
+    # If no city is recognised, retain the supplied location instead of
+    # incorrectly grouping every other Indian city under "Other".
+    city_names = [
+        "Mumbai", "Navi Mumbai", "Thane", "Panvel", "Pune", "Bengaluru",
+        "Bangalore", "Hyderabad", "Chennai", "Delhi", "New Delhi", "Noida",
+        "Greater Noida", "Gurugram", "Gurgaon", "Faridabad", "Ghaziabad",
+        "Kolkata", "Ahmedabad", "Surat", "Vadodara", "Rajkot", "Jaipur",
+        "Jodhpur", "Udaipur", "Indore", "Bhopal", "Nagpur", "Nashik",
+        "Aurangabad", "Chhatrapati Sambhajinagar", "Lucknow", "Kanpur",
+        "Varanasi", "Prayagraj", "Agra", "Meerut", "Chandigarh", "Mohali",
+        "Panchkula", "Ludhiana", "Amritsar", "Jalandhar", "Dehradun",
+        "Haridwar", "Kochi", "Cochin", "Thiruvananthapuram", "Trivandrum",
+        "Kozhikode", "Coimbatore", "Madurai", "Mysuru", "Mysore", "Mangaluru",
+        "Mangalore", "Visakhapatnam", "Vizag", "Vijayawada", "Guntur",
+        "Bhubaneswar", "Cuttack", "Patna", "Ranchi", "Jamshedpur", "Raipur",
+        "Guwahati", "Shillong", "Imphal", "Siliguri", "Panaji", "Goa",
+        "Vasai", "Virar", "Kalyan", "Dombivli", "Ulhasnagar", "Amravati",
+        "Kolhapur", "Solapur", "Satara", "Nanded", "Jalgaon", "Akola"
+    ]
+    def detect_city(value):
+        text = str(value).strip()
+        lower = text.lower()
+        # Prefer longer names first (e.g. Navi Mumbai before Mumbai).
+        for city_name in sorted(city_names, key=len, reverse=True):
+            if city_name.lower() in lower:
+                if city_name == "Bangalore": return "Bengaluru"
+                if city_name == "Gurgaon": return "Gurugram"
+                if city_name == "Cochin": return "Kochi"
+                if city_name == "Trivandrum": return "Thiruvananthapuram"
+                if city_name == "Mysore": return "Mysuru"
+                if city_name == "Mangalore": return "Mangaluru"
+                if city_name == "Vizag": return "Visakhapatnam"
+                return city_name
+        return text if text else "Other"
 
-    df["city"] = "Other"
-    df.loc[location_text.str.contains("panvel", na=False), "city"] = "Panvel"
-    df.loc[location_text.str.contains("navi mumbai", na=False), "city"] = "Navi Mumbai"
-
-    mumbai_mask = (
-        location_text.str.contains("mumbai", na=False)
-        & ~location_text.str.contains("navi mumbai", na=False)
-    )
-    df.loc[mumbai_mask, "city"] = "Mumbai"
-
+    df["city"] = df["location"].apply(detect_city)
     return df
 
 
@@ -638,81 +662,70 @@ with st.sidebar:
     </div>
     <div style="color:#172b49;font-size:23px;
                 font-weight:800;margin-top:12px;">
-        Property Details
+        Explore Properties
     </div>
     <div style="color:#63758c;font-size:12px;margin-top:8px;">
-        Configure your property to explore AI insights.
+        Choose a property to update its details and AI analysis.
     </div>
 </div>
         """,
         unsafe_allow_html=True
     )
 
-
-
-
     st.markdown("##### 📍 PROPERTY LOCATION")
+    city_options = sorted(properties["city"].dropna().unique().tolist())
+    location = st.selectbox("City", city_options, key="sidebar_city")
 
-    location = st.selectbox(
-        "City",
-        sorted(properties["city"].unique())
-    )
+    city_properties = properties[properties["city"] == location].copy()
+    type_options = sorted(city_properties["property_type"].dropna().unique().tolist())
+    property_type = st.selectbox("Property type", type_options, key="sidebar_property_type")
 
-    property_type = st.selectbox(
-        "Property type",
-        sorted(properties["property_type"].unique())
+    matching_properties = city_properties[city_properties["property_type"] == property_type].copy()
+    if matching_properties.empty:
+        matching_properties = city_properties
+
+    property_options = matching_properties["property_name"].astype(str).tolist()
+    selected_property_name = st.selectbox(
+        "Select property", property_options, key="sidebar_selected_property"
     )
+    selected_rows = matching_properties[
+        matching_properties["property_name"].astype(str) == selected_property_name
+    ]
+    selected_property = selected_rows.iloc[0]
+
+    # Use the chosen CSV property's values as the starting values, not fixed demo defaults.
+    safe_key = "".join(ch for ch in selected_property_name if ch.isalnum())[:35] or "selected"
+    default_price = max(1.0, float(selected_property["price_lakh"]))
+    default_area = max(50, int(selected_property["area_sqft"]))
+    default_age = max(0, int(selected_property["building_age"]))
+    default_rent = max(0, int(selected_property["monthly_rent"]))
 
     st.divider()
-
     st.markdown("##### 🏡 PROPERTY SPECIFICATIONS")
-
     price_lakh = st.number_input(
-        "Asking price (₹ lakh)",
-        min_value=1.0,
-        max_value=10000.0,
-        value=60.0,
-        step=1.0
+        "Asking price (₹ lakh)", min_value=1.0, max_value=10000.0,
+        value=default_price, step=1.0, key=f"sidebar_price_{safe_key}"
     )
-
     area = st.number_input(
-        "Area (sq. ft.)",
-        min_value=50,
-        max_value=100000,
-        value=600,
-        step=10
+        "Area (sq. ft.)", min_value=50, max_value=100000,
+        value=default_area, step=10, key=f"sidebar_area_{safe_key}"
     )
-
     age = st.number_input(
-        "Building age (years)",
-        min_value=0,
-        max_value=150,
-        value=5,
-        step=1
+        "Building age (years)", min_value=0, max_value=150,
+        value=default_age, step=1, key=f"sidebar_age_{safe_key}"
     )
 
     st.divider()
-
     st.markdown("##### 💰 RENTAL INFORMATION")
-
     monthly_rent = st.number_input(
-        "Expected monthly rent (₹)",
-        min_value=0,
-        max_value=10000000,
-        value=15000,
-        step=1000
+        "Expected monthly rent (₹)", min_value=0, max_value=10000000,
+        value=default_rent, step=1000, key=f"sidebar_rent_{safe_key}"
     )
-
     st.divider()
-
     compare_location = st.checkbox(
-        "Compare with selected location",
-        value=True
+        "Compare with selected location", value=True, key="sidebar_compare_location"
     )
-
-    st.caption(
-        "Your selections automatically update the property analysis."
-    )
+    st.caption("Your selections automatically update the property analysis.")
 
 # Calculations
 price_rupees = price_lakh * 100000
@@ -863,6 +876,15 @@ with st.container(border=True):
                                         details.append(f"₹{float(item.get('pricePerSqft')):,.0f}/sq.ft.")
                                     except (TypeError, ValueError):
                                         details.append(f"{item.get('pricePerSqft')}/sq.ft.")
+                                photo_url = (
+                                    item.get("imageUrl") or item.get("image_url")
+                                    or item.get("thumbnail") or item.get("coverImage")
+                                    or item.get("image")
+                                )
+                                if isinstance(photo_url, dict):
+                                    photo_url = photo_url.get("url") or photo_url.get("src")
+                                if isinstance(photo_url, str) and photo_url.startswith(("https://", "http://")):
+                                    st.image(photo_url, use_container_width=True)
                                 st.markdown(f"**{title}**")
                                 if place:
                                     st.caption(f"📍 {place}")
@@ -931,7 +953,8 @@ st.caption(
 )
 
 featured_properties = properties[
-    properties["city"] == location
+    (properties["city"] == location)
+    & (properties["property_type"] == property_type)
 ].head(6)
 
 if featured_properties.empty:
@@ -954,10 +977,10 @@ else:
 
                 if (
                     pd.notna(image_path)
-                    and Path(str(image_path)).is_file()
+                    and (BASE_DIR / str(image_path)).is_file()
                 ):
                     st.image(
-                        str(image_path),
+                        str(BASE_DIR / str(image_path)),
                         use_container_width=True
                     )
                 else:
