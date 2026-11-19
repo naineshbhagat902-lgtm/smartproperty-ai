@@ -4,3 +4,4 @@ matplotlib
 scikit-learn
 joblib
 plotly
+mcp>=1.9,<2
