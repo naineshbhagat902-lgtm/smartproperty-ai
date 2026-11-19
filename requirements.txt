@@ -4,4 +4,4 @@ matplotlib
 scikit-learn
 joblib
 plotly
-mcp
+mcp==1.30.0
