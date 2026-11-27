@@ -793,6 +793,121 @@ def _openverse_photo_candidates(title, place, city, country):
 
 
 
+# ==========================================
+# WIKIMEDIA COMMONS PHOTO FALLBACK (FREE)
+# ==========================================
+# No API key, Google Cloud account, billing account or card is required.
+# Results are contextual locality/building references, never claimed to be
+# the exact listing unless the listing provider itself supplied the photo.
+
+@st.cache_data(ttl=86400, max_entries=300, show_spinner=False)
+def _wikimedia_commons_search(query):
+    query = re.sub(r"\\s+", " ", str(query or "")).strip()[:180]
+    if not query:
+        return []
+
+    params = {
+        "action": "query",
+        "generator": "search",
+        "gsrsearch": query,
+        "gsrnamespace": 6,
+        "gsrlimit": 12,
+        "prop": "imageinfo",
+        "iiprop": "url|extmetadata",
+        "iiurlwidth": 1000,
+        "format": "json",
+        "origin": "*",
+    }
+    url = "https://commons.wikimedia.org/w/api.php?" + urllib.parse.urlencode(params)
+    request = urllib.request.Request(
+        url,
+        headers={
+            "Accept": "application/json",
+            "User-Agent": "SmartPropertyAI/1.0 (photo discovery; contact: project owner)",
+        },
+        method="GET",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except (urllib.error.URLError, TimeoutError, ValueError, OSError, json.JSONDecodeError):
+        return []
+
+    pages = (payload.get("query") or {}).get("pages") or {}
+    results = []
+    for page in pages.values():
+        image_info = (page.get("imageinfo") or [{}])[0]
+        metadata = image_info.get("extmetadata") or {}
+
+        def metadata_value(key, default="Not listed"):
+            raw = metadata.get(key, {})
+            value = raw.get("value") if isinstance(raw, dict) else None
+            if not value:
+                return default
+            return re.sub(r"<[^>]+>", "", str(value)).strip()[:250]
+
+        image_url = image_info.get("thumburl") or image_info.get("url")
+        if not isinstance(image_url, str) or not image_url.startswith("https://"):
+            continue
+
+        page_title = str(page.get("title") or "Wikimedia Commons image")
+        results.append({
+            "title": page_title,
+            "thumbnail": image_url,
+            "url": image_info.get("url") or image_url,
+            "creator": metadata_value("Artist"),
+            "license": metadata_value("LicenseShortName"),
+            "foreign_landing_url": "https://commons.wikimedia.org/wiki/" + urllib.parse.quote(page_title.replace(" ", "_")),
+            "description": metadata_value("ImageDescription", ""),
+            "source": "Wikimedia Commons",
+        })
+    return results
+
+
+def _wikimedia_photo_candidates(title, place, city, country):
+    """Find non-duplicate Commons images with an explicit locality match."""
+    local_terms = _photo_search_tokens(" ".join(str(x) for x in (place, city) if x))
+    if not local_terms:
+        return []
+
+    queries = []
+    for query in (
+        f"{title} {place} {city}",
+        f"{place} {city} residential building architecture",
+        f"{city} {country} apartment building architecture",
+    ):
+        query = re.sub(r"\\s+", " ", query).strip()
+        if query and query.casefold() not in {q.casefold() for q in queries}:
+            queries.append(query)
+
+    architecture_terms = {
+        "building", "architecture", "apartment", "residential", "house",
+        "villa", "tower", "condominium", "home", "exterior", "skyline",
+        "skyscraper", "facade", "real", "estate",
+    }
+    ranked = []
+    seen = set()
+    for query in queries:
+        for candidate in _wikimedia_commons_search(query):
+            candidate_url = candidate.get("thumbnail") or candidate.get("url")
+            if not candidate_url or candidate_url in seen:
+                continue
+            searchable = " ".join((
+                str(candidate.get("title") or ""),
+                str(candidate.get("description") or ""),
+            ))
+            result_tokens = _photo_search_tokens(searchable)
+            locality_hits = result_tokens.intersection(local_terms)
+            architecture_hits = result_tokens.intersection(architecture_terms)
+            # At least one actual locality/building term and one property/architecture
+            # term must be present. Country-only matches are intentionally rejected.
+            if locality_hits and architecture_hits:
+                seen.add(candidate_url)
+                ranked.append((len(locality_hits) + len(architecture_hits), candidate))
+    ranked.sort(key=lambda pair: pair[0], reverse=True)
+    return [candidate for _, candidate in ranked[:5]]
+
+
 def _country_code_from_label(country_label):
     """Country label to ISO-3166 alpha-2 code for Untera."""
     country_codes = {
@@ -1496,12 +1611,36 @@ with st.container(border=True):
                                             seen_photo_urls.add(candidate_url)
                                             break
 
+                                # 3) Last free fallback: Wikimedia Commons. It is used only
+                                # when its title/description matches both the locality and
+                                # property/architecture context; credits remain visible.
+                                if not photo_bytes:
+                                    commons_candidates = _wikimedia_photo_candidates(
+                                        title, place, display_location, map_country
+                                    )
+                                    for candidate in commons_candidates:
+                                        candidate_url = candidate.get("thumbnail") or candidate.get("url")
+                                        if not isinstance(candidate_url, str) or not candidate_url.startswith("https://"):
+                                            continue
+                                        if candidate_url in seen_photo_urls:
+                                            continue
+                                        candidate_bytes = _download_listing_photo(candidate_url)
+                                        if candidate_bytes:
+                                            photo_bytes = candidate_bytes
+                                            image_url = candidate_url
+                                            openverse_image = candidate
+                                            openverse_match_type = "locality_reference"
+                                            seen_photo_urls.add(candidate_url)
+                                            break
+
                                 if photo_bytes and not openverse_image:
                                     st.image(photo_bytes, use_container_width=True)
                                     st.caption(f"Actual listing photo supplied by {provider_name}")
                                 elif photo_bytes and openverse_image:
                                     st.image(photo_bytes, use_container_width=True)
-                                    if openverse_match_type == "locality_reference":
+                                    if openverse_image.get("source") == "Wikimedia Commons":
+                                        st.caption("Wikimedia Commons locality/building reference — not a verified photo of this exact listing.")
+                                    elif openverse_match_type == "locality_reference":
                                         st.caption("Locality reference photo — not verified as this exact property.")
                                     else:
                                         st.caption("Openly licensed image matched to the building/locality terms — exact listing identity is not verified.")
