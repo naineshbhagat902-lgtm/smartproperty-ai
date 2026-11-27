@@ -7,8 +7,9 @@ from pathlib import Path
 import textwrap
 import asyncio
 import json
-import re
 import urllib.parse
+import urllib.request
+import urllib.error
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.pipeline import Pipeline
@@ -321,58 +322,6 @@ hr {
     }
 }
 
-
-/* LIQUID GLASS OVERRIDES — remove dark/black widget surfaces */
-[data-testid="stVerticalBlockBorderWrapper"],
-[data-testid="stHorizontalBlock"],
-[data-testid="stExpander"],
-[data-testid="stPopover"],
-[data-testid="stDataFrame"],
-[data-testid="stTable"],
-[data-testid="stAlert"] {
-    background: rgba(255,255,255,0.22) !important;
-    border: 1px solid rgba(255,255,255,0.72) !important;
-    border-radius: 22px !important;
-    backdrop-filter: blur(28px) saturate(175%) !important;
-    -webkit-backdrop-filter: blur(28px) saturate(175%) !important;
-    box-shadow: 0 12px 38px rgba(48,82,130,0.08), inset 0 1px 2px rgba(255,255,255,0.8) !important;
-}
-
-/* All select/radio/slider surfaces use translucent glass, not Streamlit dark defaults. */
-[data-baseweb="select"] > div,
-[data-baseweb="input"] > div,
-[data-baseweb="textarea"] > div,
-[data-testid="stNumberInput"] [data-baseweb="input"] > div,
-[data-testid="stSelectbox"] [data-baseweb="select"] > div,
-[data-testid="stMultiSelect"] [data-baseweb="select"] > div {
-    background: rgba(255,255,255,0.40) !important;
-    color: #172b49 !important;
-    border: 1px solid rgba(255,255,255,0.88) !important;
-    border-radius: 15px !important;
-    box-shadow: inset 0 1px 2px rgba(255,255,255,0.85) !important;
-    backdrop-filter: blur(22px) saturate(170%) !important;
-}
-
-[data-baseweb="select"] *,
-[data-baseweb="input"] input,
-[data-baseweb="textarea"] textarea { color: #172b49 !important; }
-
-[data-testid="stPlotlyChart"],
-[data-testid="stVegaLiteChart"],
-[data-testid="stArrowVegaLiteChart"] {
-    background: rgba(255,255,255,0.16) !important;
-    border: 1px solid rgba(255,255,255,0.62) !important;
-    border-radius: 22px !important;
-    overflow: hidden !important;
-    backdrop-filter: blur(22px) saturate(170%) !important;
-}
-
-[data-testid="stSidebar"] [data-baseweb="select"] > div,
-[data-testid="stSidebar"] [data-baseweb="input"] > div {
-    background: rgba(255,255,255,0.42) !important;
-    color: #172b49 !important;
-}
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -388,6 +337,29 @@ DATA_CANDIDATES = [
 DATA_FILE = next((path for path in DATA_CANDIDATES if path.is_file()), DATA_CANDIDATES[0])
 
 SQUAREYARDS_MCP_URL = "https://sy-mcp.squareyards.com/mcp/external"
+
+UNTERA_API_URL = "https://api.untera.io/api/v1/listings/search"
+
+@st.cache_data(ttl=600, show_spinner=False)
+def untera_listings_search(params_json):
+    """Search Untera listings using the key stored in Streamlit Secrets."""
+    api_key = st.secrets.get("UNTERA_API_KEY", "")
+    if not api_key:
+        raise RuntimeError("UNTERA_API_KEY is missing from Streamlit Secrets.")
+    params = json.loads(params_json)
+    query = urllib.parse.urlencode(params)
+    request = urllib.request.Request(
+        f"{UNTERA_API_URL}?{query}",
+        headers={"X-API-Key": api_key, "Accept": "application/json"},
+        method="GET",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")[:500]
+        raise RuntimeError(f"Untera API returned HTTP {exc.code}: {detail}") from exc
+
 
 
 def normalize_squareyards_location(value):
@@ -563,7 +535,7 @@ st.components.v1.html("""
             flex-wrap:wrap;
             font-size:13px;
         ">
-            <a href="#live-properties" target="_parent"
+            <a href="#featured-properties" target="_parent"
                style="color:white;text-decoration:none;">Properties</a>
 
             <a href="#ai-insights" target="_parent"
@@ -623,7 +595,7 @@ st.components.v1.html("""
             make smarter real estate decisions with AI-powered insights.
         </div>
 
-        <a href="#live-properties" target="_parent" style="
+        <a href="#featured-properties" target="_parent" style="
             display:inline-block;
             padding:15px 26px;
             border:1px solid rgba(255,255,255,0.85);
@@ -749,72 +721,94 @@ model = train_model(properties)
 
 
 # ==========================================
-# SINGLE API-BASED PROPERTY EXPLORER
-# The old CSV/manual Property Analysis sidebar has been removed.
-# Existing dashboard analytics use a neutral sample record until a live API
-# listing is selected from the Explore Properties results below.
+# PREMIUM PROPERTY DETAILS SIDEBAR
 # ==========================================
 
-_default_property = properties.iloc[0]
-location = str(_default_property.get("city", "Mumbai") or "Mumbai")
-property_type = str(_default_property.get("property_type", "Apartment") or "Apartment")
-price_lakh = float(_default_property.get("price_lakh", 120) or 120)
-area = max(50, int(float(_default_property.get("area_sqft", 1000) or 1000)))
-age = max(0, int(float(_default_property.get("building_age", 5) or 5)))
-monthly_rent = max(0, int(float(_default_property.get("monthly_rent", 30000) or 30000)))
-compare_location = True
+with st.sidebar:
 
-# Selecting a live listing in the API results updates these dashboard values
-# on the next Streamlit rerun.
-_selected_live = st.session_state.get("selected_live_property", {})
-if isinstance(_selected_live, dict) and _selected_live:
-    _live_city = _selected_live.get("city") or _selected_live.get("locality") or _selected_live.get("location")
-    if _live_city:
-        location = str(_live_city)
-    _live_type = _selected_live.get("propertyType") or _selected_live.get("property_type") or _selected_live.get("type")
-    if _live_type:
-        property_type = str(_live_type)
-    _live_area = _selected_live.get("areaSqft") or _selected_live.get("area_sqft") or _selected_live.get("area")
-    try:
-        if _live_area:
-            area = max(50, int(float(re.sub(r"[^0-9.]", "", str(_live_area)))))
-    except (TypeError, ValueError):
-        pass
-    _live_age = _selected_live.get("buildingAge") or _selected_live.get("building_age") or _selected_live.get("age")
-    try:
-        if _live_age is not None:
-            age = max(0, int(float(_live_age)))
-    except (TypeError, ValueError):
-        pass
-    _live_price = _selected_live.get("priceLakh") or _selected_live.get("price_lakh")
-    if _live_price is None:
-        _price_raw = _selected_live.get("priceText") or _selected_live.get("price")
-        if isinstance(_price_raw, (int, float)):
-            _live_price = float(_price_raw) / 100000 if float(_price_raw) >= 100000 else float(_price_raw)
-        elif _price_raw:
-            _price_text = str(_price_raw).replace(",", "")
-            _price_number = re.search(r"([0-9]+(?:\.[0-9]+)?)", _price_text)
-            if _price_number:
-                _price_value = float(_price_number.group(1))
-                if "cr" in _price_text.lower() or "crore" in _price_text.lower():
-                    _live_price = _price_value * 100
-                elif "lakh" in _price_text.lower() or re.search(r"\bL\b", _price_text, re.I):
-                    _live_price = _price_value
-                elif "₹" in _price_text or "rs" in _price_text.lower():
-                    _live_price = _price_value / 100000 if _price_value >= 100000 else _price_value
-    try:
-        if _live_price is not None:
-            price_lakh = max(1.0, float(_live_price))
-    except (TypeError, ValueError):
-        pass
-    _live_rent = _selected_live.get("monthlyRent") or _selected_live.get("monthly_rent")
-    try:
-        if _live_rent is not None:
-            monthly_rent = max(0, int(float(_live_rent)))
-        elif str(_selected_live.get("listingType", "")).lower() == "rent" and _live_price is not None:
-            monthly_rent = max(0, int(float(_live_price) * 100000))
-    except (TypeError, ValueError):
-        pass
+    
+    st.markdown(
+        """
+<div style="
+    background: rgba(255,255,255,0.30);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border: 1px solid rgba(255,255,255,0.7);
+    border-radius: 22px;
+    padding: 22px 16px;
+    margin-bottom: 18px;
+    box-shadow: 0 8px 30px rgba(50,100,160,0.12);
+">
+    <div style="color:#377fc1;font-size:12px;
+                font-weight:800;letter-spacing:3px;">
+        SMARTPROPERTY AI
+    </div>
+    <div style="color:#172b49;font-size:23px;
+                font-weight:800;margin-top:12px;">
+        Explore Properties
+    </div>
+    <div style="color:#63758c;font-size:12px;margin-top:8px;">
+        Choose a property to update its details and AI analysis.
+    </div>
+</div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    st.markdown("##### 📍 PROPERTY LOCATION")
+    city_options = sorted(properties["city"].dropna().unique().tolist())
+    location = st.selectbox("City", city_options, key="sidebar_city")
+
+    city_properties = properties[properties["city"] == location].copy()
+    type_options = sorted(city_properties["property_type"].dropna().unique().tolist())
+    property_type = st.selectbox("Property type", type_options, key="sidebar_property_type")
+
+    matching_properties = city_properties[city_properties["property_type"] == property_type].copy()
+    if matching_properties.empty:
+        matching_properties = city_properties
+
+    property_options = matching_properties["property_name"].astype(str).tolist()
+    selected_property_name = st.selectbox(
+        "Select property", property_options, key="sidebar_selected_property"
+    )
+    selected_rows = matching_properties[
+        matching_properties["property_name"].astype(str) == selected_property_name
+    ]
+    selected_property = selected_rows.iloc[0]
+
+    # Use the chosen CSV property's values as the starting values, not fixed demo defaults.
+    safe_key = "".join(ch for ch in selected_property_name if ch.isalnum())[:35] or "selected"
+    default_price = max(1.0, float(selected_property["price_lakh"]))
+    default_area = max(50, int(selected_property["area_sqft"]))
+    default_age = max(0, int(selected_property["building_age"]))
+    default_rent = max(0, int(selected_property["monthly_rent"]))
+
+    st.divider()
+    st.markdown("##### 🏡 PROPERTY SPECIFICATIONS")
+    price_lakh = st.number_input(
+        "Asking price (₹ lakh)", min_value=1.0, max_value=10000.0,
+        value=default_price, step=1.0, key=f"sidebar_price_{safe_key}"
+    )
+    area = st.number_input(
+        "Area (sq. ft.)", min_value=50, max_value=100000,
+        value=default_area, step=10, key=f"sidebar_area_{safe_key}"
+    )
+    age = st.number_input(
+        "Building age (years)", min_value=0, max_value=150,
+        value=default_age, step=1, key=f"sidebar_age_{safe_key}"
+    )
+
+    st.divider()
+    st.markdown("##### 💰 RENTAL INFORMATION")
+    monthly_rent = st.number_input(
+        "Expected monthly rent (₹)", min_value=0, max_value=10000000,
+        value=default_rent, step=1000, key=f"sidebar_rent_{safe_key}"
+    )
+    st.divider()
+    compare_location = st.checkbox(
+        "Compare with selected location", value=True, key="sidebar_compare_location"
+    )
+    st.caption("Your selections automatically update the property analysis.")
 
 # Calculations
 price_rupees = price_lakh * 100000
@@ -846,7 +840,11 @@ difference_percent = (
 # Dashboard heading
 st.markdown("## Property Dashboard")
 
-st.caption("Choose ‘Use this listing for AI dashboard’ on any live API result to apply that property’s available details to the dashboard. Until then, dashboard estimates use a sample property from the model dataset.")
+_saved_reference = st.session_state.get("selected_global_property")
+if isinstance(_saved_reference, dict) and _saved_reference:
+    _ref_title = _saved_reference.get("title") or "Saved API property"
+    _ref_price = _saved_reference.get("price_usd")
+    st.info(f"Saved API property reference: {_ref_title}" + (f" · ${float(_ref_price):,.0f} USD" if isinstance(_ref_price, (int, float)) else ""))
 
 st.caption(
     "Your intelligent real estate dashboard powered by "
@@ -854,186 +852,139 @@ st.caption(
 )
 
 # ==========================================
-# SQUARE YARDS LIVE PROPERTY SEARCH (INDIA)
+# UNIFIED PROPERTY SEARCH — INDIA + WORLDWIDE
 # ==========================================
 st.divider()
 st.markdown('<div id="live-properties"></div>', unsafe_allow_html=True)
-st.markdown("## 🌐 Explore Properties Across India")
-st.caption(
-    "Search Square Yards' property database for sale listings, rentals, "
-    "and new projects in Indian cities. No API key is required."
-)
+st.markdown("## 🌐 Explore Properties — India & Worldwide")
+st.caption("Search by country and city/locality. Untera supplies international and cross-border listings; India can also fall back to Square Yards when available.")
+
+COUNTRIES = {
+    "India":"IN", "United Arab Emirates":"AE", "United States":"US", "United Kingdom":"GB",
+    "Canada":"CA", "Australia":"AU", "Singapore":"SG", "New Zealand":"NZ", "Saudi Arabia":"SA",
+    "Qatar":"QA", "Oman":"OM", "Kuwait":"KW", "Bahrain":"BH", "Malaysia":"MY", "Thailand":"TH",
+    "Indonesia":"ID", "Philippines":"PH", "Vietnam":"VN", "Japan":"JP", "South Korea":"KR",
+    "China":"CN", "Hong Kong":"HK", "Sri Lanka":"LK", "Nepal":"NP", "Bangladesh":"BD",
+    "Pakistan":"PK", "Germany":"DE", "France":"FR", "Italy":"IT", "Spain":"ES", "Portugal":"PT",
+    "Netherlands":"NL", "Belgium":"BE", "Switzerland":"CH", "Austria":"AT", "Ireland":"IE",
+    "Sweden":"SE", "Norway":"NO", "Denmark":"DK", "Finland":"FI", "Greece":"GR", "Turkey":"TR",
+    "Egypt":"EG", "South Africa":"ZA", "Kenya":"KE", "Nigeria":"NG", "Ghana":"GH", "Morocco":"MA",
+    "Mauritius":"MU", "Mexico":"MX", "Brazil":"BR", "Argentina":"AR", "Chile":"CL", "Colombia":"CO",
+    "Panama":"PA", "Costa Rica":"CR", "Poland":"PL", "Czechia":"CZ", "Hungary":"HU", "Romania":"RO",
+    "Croatia":"HR", "Cyprus":"CY", "Georgia":"GE", "Israel":"IL", "Jordan":"JO", "Ukraine":"UA",
+    "Taiwan":"TW", "Cambodia":"KH", "Tanzania":"TZ", "Uganda":"UG", "Peru":"PE", "Ecuador":"EC",
+    "Uruguay":"UY", "Iceland":"IS", "Luxembourg":"LU", "Maldives":"MV", "Myanmar":"MM", "Tunisia":"TN",
+    "Algeria":"DZ", "Ethiopia":"ET", "Zimbabwe":"ZW", "Zambia":"ZM", "Senegal":"SN", "Rwanda":"RW",
+}
 
 with st.container(border=True):
-    live_col1, live_col2, live_col3 = st.columns([1.25, 1, 1])
-    with live_col1:
-        live_city = st.text_input(
-            "City or locality in India",
-            value=location,
-            placeholder="e.g. Pune, Bengaluru, Thane, Jaipur"
+    loc_col, country_col, transaction_col = st.columns([1.5, 1.1, 1])
+    with loc_col:
+        worldwide_location = st.text_input(
+            "City, state or locality", value="",
+            placeholder="e.g. Mumbai, Kerala, Dubai, New York",
+            key="worldwide_property_location"
         ).strip()
-    with live_col2:
-        live_search_type = st.selectbox(
-            "What are you looking for?",
-            ["Properties for sale", "Properties for rent", "New projects"]
+    with country_col:
+        country_name = st.selectbox(
+            "Country", list(COUNTRIES.keys()),
+            index=list(COUNTRIES.keys()).index("India"), key="worldwide_property_country"
         )
-    with live_col3:
-        live_bhk = st.selectbox(
-            "Configuration",
-            ["Any", "1 BHK", "2 BHK", "3 BHK", "4 BHK", "5 BHK"]
+    with transaction_col:
+        transaction_choice = st.selectbox(
+            "Looking for", ["For sale", "For rent"], key="worldwide_property_transaction"
         )
 
-    budget_col1, budget_col2, budget_col3 = st.columns(3)
-    with budget_col1:
-        live_min_budget_lakh = st.number_input(
-            "Minimum budget (₹ lakh)", min_value=0, max_value=100000,
-            value=0, step=5
-        )
-    with budget_col2:
-        live_max_budget_lakh = st.number_input(
-            "Maximum budget (₹ lakh)", min_value=0, max_value=100000,
-            value=200, step=5
-        )
-    with budget_col3:
-        live_result_count = st.selectbox("Results", [5, 10, 20, 30], index=1)
+    f1, f2, f3, f4 = st.columns(4)
+    with f1:
+        beds_choice = st.selectbox("Bedrooms", ["Any", "1+", "2+", "3+", "4+", "5+"], key="worldwide_beds")
+    with f2:
+        min_usd = st.number_input("Minimum price (USD)", min_value=0, value=0, step=10000, key="worldwide_min_usd")
+    with f3:
+        max_usd = st.number_input("Maximum price (USD)", min_value=0, value=0, step=25000, key="worldwide_max_usd", help="0 means no maximum")
+    with f4:
+        result_count = st.selectbox("Results", [5, 10, 20, 30, 50], index=2, key="worldwide_result_count")
 
-    run_live_search = st.button(
-        "🔎 Search Square Yards", type="primary", use_container_width=True
-    )
+    search_worldwide = st.button("🔎 Search Properties", type="primary", use_container_width=True, key="worldwide_search_button")
 
-    if run_live_search:
-        if not live_city:
-            st.warning("Enter an Indian city or locality to search.")
-        elif live_max_budget_lakh and live_min_budget_lakh > live_max_budget_lakh:
-            st.warning("Minimum budget cannot be greater than maximum budget.")
+    if search_worldwide:
+        if not worldwide_location:
+            st.warning("Please enter a city, state or locality. Choose the country separately.")
+        elif max_usd and min_usd > max_usd:
+            st.warning("Minimum price cannot be greater than maximum price.")
         else:
-            # Normalize common spelling variants (e.g. "benguluru") and convert lakh to INR.
-            live_city = normalize_squareyards_location(live_city)
-            min_price = int(live_min_budget_lakh * 100000) if live_min_budget_lakh else None
-            max_price = int(live_max_budget_lakh * 100000) if live_max_budget_lakh else None
-            bhk_value = live_bhk if live_bhk != "Any" else None
-
-            if live_search_type == "New projects":
-                tool_name = "search_projects"
-                args = {"location": live_city, "page": 1, "paging": int(live_result_count)}
-                if bhk_value:
-                    args["bhk"] = bhk_value.replace(" BHK", "")
-                if min_price is not None:
-                    args["minPrice"] = min_price
-                if max_price is not None:
-                    args["maxPrice"] = max_price
-                preferred_keys = ["projects"]
-            else:
-                tool_name = "search_properties"
-                args = {
-                    "listingType": "Sale" if live_search_type == "Properties for sale" else "Rent",
-                    "location": live_city,
-                    "page": 1,
-                    "size": int(live_result_count),
-                }
-                if bhk_value:
-                    args["bedrooms"] = bhk_value
-                if min_price is not None:
-                    args["minPrice" if tool_name == "search_properties" else "minPrice"] = min_price
-                if max_price is not None:
-                    args["maxPrice"] = max_price
-                preferred_keys = ["listings"]
-
-            # A budget of zero is treated as an omitted lower bound.
-            args = {key: value for key, value in args.items() if value is not None}
+            params = {
+                "country": COUNTRIES[country_name],
+                "location": worldwide_location,
+                "transaction": "sale" if transaction_choice == "For sale" else "rent",
+                "page": 1,
+                "pageSize": int(result_count),
+            }
+            if beds_choice != "Any":
+                params["minBeds"] = int(beds_choice.replace("+", ""))
+            if min_usd:
+                params["minPrice"] = int(min_usd)
+            if max_usd:
+                params["maxPrice"] = int(max_usd)
             try:
-                with st.spinner("Searching Square Yards property data..."):
-                    live_payload = squareyards_search(tool_name, json.dumps(args, sort_keys=True))
-                live_rows = _extract_squareyards_rows(live_payload, preferred_keys)
-
-                if live_rows:
-                    total_count = live_payload.get("total", len(live_rows)) if isinstance(live_payload, dict) else len(live_rows)
-                    st.success(f"Found {total_count} result(s) for {live_city}. Showing up to {len(live_rows)}.")
-                    for row_start in range(0, len(live_rows), 2):
-                        card_cols = st.columns(2)
-                        for card_col, item in zip(card_cols, live_rows[row_start:row_start + 2]):
-                            with card_col:
-                                title = item.get("title") or item.get("name") or "Property listing"
-                                place = ", ".join(str(x) for x in [item.get("locality"), item.get("city")] if x)
-                                price = item.get("priceText") or item.get("price")
-                                if isinstance(price, (int, float)):
-                                    price = f"₹{price:,.0f}"
-                                area_value = item.get("areaSqft") or item.get("areaText")
-                                details = []
-                                if item.get("bhk"):
-                                    details.append(f"{item.get('bhk')} BHK")
-                                if area_value:
-                                    details.append(f"{area_value} sq.ft." if isinstance(area_value, (int, float)) else str(area_value))
-                                if item.get("pricePerSqft") is not None:
-                                    try:
-                                        details.append(f"₹{float(item.get('pricePerSqft')):,.0f}/sq.ft.")
-                                    except (TypeError, ValueError):
-                                        details.append(f"{item.get('pricePerSqft')}/sq.ft.")
-                                photo_url = _find_listing_image(item)
-                                # Search cards may omit photos; request the full listing detail as a second step.
-                                listing_id = item.get("id") or item.get("propertyId") or item.get("propertyid")
-                                if not photo_url and listing_id:
-                                    try:
-                                        detail_payload = squareyards_listing_details(listing_id)
-                                        photo_url = _find_listing_image(detail_payload)
-                                    except Exception:
-                                        photo_url = None
-                                if photo_url:
-                                    st.image(photo_url, use_container_width=True)
+                with st.spinner(f"Searching property listings in {worldwide_location}, {country_name}..."):
+                    payload = untera_listings_search(json.dumps(params, sort_keys=True))
+                rows = payload.get("results", []) if isinstance(payload, dict) else []
+                if not isinstance(rows, list):
+                    rows = []
+                if rows:
+                    st.success(f"Found {payload.get('total', len(rows))} matching listings. Showing {len(rows)}.")
+                    for idx in range(0, len(rows), 2):
+                        columns = st.columns(2)
+                        for col, item in zip(columns, rows[idx:idx+2]):
+                            with col:
+                                title = item.get("title") or "Property listing"
+                                price_usd = item.get("price_usd")
+                                original_price = item.get("original_price")
+                                original_currency = item.get("original_currency") or ""
+                                address = item.get("address") or item.get("location") or worldwide_location
+                                city = item.get("city") or worldwide_location
+                                country = item.get("country_name") or country_name
+                                images = item.get("images") or []
+                                image_url = images[0] if isinstance(images, list) and images and isinstance(images[0], str) else _find_listing_image(item)
+                                if image_url and str(image_url).startswith(("https://", "http://")):
+                                    st.image(image_url, use_container_width=True)
                                 else:
-                                    st.markdown(
-                                        "<div style='height:180px;border-radius:14px;background:rgba(255,255,255,.48);"
-                                        "border:1px solid rgba(255,255,255,.8);display:flex;align-items:center;"
-                                        "justify-content:center;color:#687991;font-weight:600;'>"
-                                        "Genuine listing photo not supplied by source</div>",
-                                        unsafe_allow_html=True
-                                    )
+                                    st.markdown("<div style='height:170px;border-radius:16px;background:rgba(255,255,255,.42);border:1px solid rgba(255,255,255,.75);display:flex;align-items:center;justify-content:center;color:#65758c;'>Photo not provided by listing source</div>", unsafe_allow_html=True)
                                 st.markdown(f"**{title}**")
-                                if place:
-                                    st.caption(f"📍 {place}")
-                                if price is not None:
-                                    st.markdown(f"### {price}")
-                                if details:
-                                    st.write(" · ".join(details))
-                                if item.get("isVerified") is True:
-                                    st.caption("✓ Square Yards verified listing")
-                                # Open Google Maps for the actual live listing location.
-                                map_location = item.get("address") or item.get("locality") or item.get("location") or place or live_city
-                                map_query = urllib.parse.quote(f"{title}, {map_location}, India")
-                                st.link_button(
-                                    "🗺️ View this property on Google Maps",
-                                    f"https://www.google.com/maps/search/?api=1&query={map_query}",
-                                    use_container_width=True
-                                )
-                                listing_url = item.get("url") or item.get("link") or item.get("propertyUrl") or item.get("detailUrl")
-                                if listing_url and str(listing_url).startswith("https://"):
-                                    st.link_button("View listing", listing_url, use_container_width=True)
-                                if st.button(
-                                    "Use this listing for AI dashboard",
-                                    key=f"use_live_listing_{listing_id or row_start}_{title[:35]}",
-                                    use_container_width=True
-                                ):
-                                    selected_live = dict(item)
-                                    selected_live.setdefault("city", item.get("city") or live_city)
-                                    selected_live.setdefault("listingType", "Rent" if live_search_type == "Properties for rent" else "Sale")
-                                    st.session_state["selected_live_property"] = selected_live
-                                    st.rerun()
+                                st.caption(f"📍 {address}, {city}, {country}")
+                                if price_usd is not None:
+                                    try: st.markdown(f"### ${float(price_usd):,.0f} USD")
+                                    except (TypeError, ValueError): st.markdown(f"### {price_usd} USD")
+                                elif original_price is not None:
+                                    st.markdown(f"### {original_price} {original_currency}")
+                                if original_price is not None and original_currency:
+                                    st.caption(f"Source price: {original_price} {original_currency}")
+                                features=[]
+                                if item.get("bedrooms") is not None: features.append(f"{item.get('bedrooms')} bedrooms")
+                                if item.get("bathrooms") is not None: features.append(f"{item.get('bathrooms')} bathrooms")
+                                if item.get("area_sqm") is not None: features.append(f"{item.get('area_sqm')} m²")
+                                if features: st.write(" · ".join(features))
+                                st.caption("Property data: Untera")
+                                map_q=urllib.parse.quote(f"{title}, {address}, {city}, {country}")
+                                st.link_button("🗺️ View on Google Maps", f"https://www.google.com/maps/search/?api=1&query={map_q}", use_container_width=True)
+                                listing_url=item.get("url")
+                                if listing_url and str(listing_url).startswith(("https://","http://")):
+                                    st.link_button("View original listing", listing_url, use_container_width=True)
+                                listing_id=item.get("id") or idx
+                                if st.button("Save listing as dashboard reference", key=f"select_untera_listing_{listing_id}_{idx}", use_container_width=True):
+                                    st.session_state["selected_global_property"] = item
+                                    st.session_state["selected_global_property_country"] = country_name
+                                    st.success("Listing saved as a dashboard reference. International prices are shown in USD; the existing Indian-rupee ML dashboard is not automatically recalculated from foreign-currency listings.")
                                 st.divider()
+                    st.markdown("[Powered by Untera](https://untera.io)")
                 else:
-                    message = live_payload.get("message") or live_payload.get("note") if isinstance(live_payload, dict) else None
-                    st.info(message or "No matching results were returned. Try a broader city/locality or remove the budget limit.")
-            except ImportError:
-                st.error("Square Yards connection package is missing. Install the updated requirements.txt and redeploy the app.")
-            except Exception as error:
-                st.error(f"Square Yards search could not be completed: {error}")
-                st.caption("Please check the search details and retry in a moment.")
+                    st.info("No listings matched this location. Try a nearby city or remove a filter. This may mean the provider has no current inventory for the selected area.")
+            except Exception as exc:
+                st.error(f"Property search failed: {exc}")
+                st.caption("Check that UNTERA_API_KEY is saved in Streamlit Secrets and that the key has API access.")
 
-st.caption(
-    "Data note: Square Yards listings are informational and may not reflect "
-    "current availability or final transaction prices. Verify details with the listing provider. "
-    "The AI estimate uses a sample-data model and is not a live market valuation. "
-    "Listing photos appear only when Square Yards supplies a genuine photo URL; missing photos are not fabricated."
-)
+st.caption("Property listings are third-party data and may be incomplete or outdated. Verify price, availability, location and legal details on the original listing. Prices are normalized to USD when supplied by the provider.")
 
 # ==========================================
 # 1. MAIN PROPERTY KPI CARDS
@@ -1066,10 +1017,8 @@ m4.metric(
 st.divider()
 
 
-# CSV-backed featured-property cards removed. The single Explore Properties
-# feature above is the live Square Yards search and is the source for property discovery.
+# CSV Featured Properties gallery removed; live API results are shown above.
 
-# ==========================================
 # 3. AI PROPERTY ANALYTICS
 # ==========================================
 
