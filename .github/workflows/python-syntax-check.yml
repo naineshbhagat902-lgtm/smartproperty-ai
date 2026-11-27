@@ -1,0 +1,23 @@
+name: Python syntax check
+
+on:
+  push:
+    branches:
+      - main
+      - feature/openverse-property-photos
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Compile Streamlit application
+        run: python -m py_compile app.py
