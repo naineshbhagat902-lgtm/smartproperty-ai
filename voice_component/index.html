@@ -32,7 +32,7 @@ input{flex:1;min-width:160px}
 <div class="panel" id="root">
   <div class="top">
     <h3 id="heading">SmartProperty AI Voice</h3>
-    <span class="pill">FREE · BROWSER VOICE</span>
+    <span class="pill">NATURAL NEURAL VOICE</span>
   </div>
   <p class="sub" id="description">Use your voice to search Indian properties.</p>
   <div class="controls">
@@ -47,6 +47,9 @@ input{flex:1;min-width:160px}
     <div class="controls" style="margin-top:10px">
       <input id="question" type="text" placeholder="Ask: What is the estimated property price?">
       <button class="primary" id="ask">Ask assistant</button>
+    </div>
+    <div class="controls" style="margin-top:10px">
+      <select id="gender" aria-label="Voice type"><option value="female">Natural female voice</option><option value="male">Natural male voice</option></select>
     </div>
     <div class="grid">
       <button id="readDashboard">🔊 Read dashboard</button>
@@ -64,6 +67,7 @@ input{flex:1;min-width:160px}
   const heading=document.getElementById("heading");
   const description=document.getElementById("description");
   const language=document.getElementById("language");
+  const gender=document.getElementById("gender");
   const listen=document.getElementById("listen");
   const assistantControls=document.getElementById("assistantControls");
   const question=document.getElementById("question");
@@ -142,13 +146,13 @@ input{flex:1;min-width:160px}
     const mode=args.mode||"search";
     if(mode==="assistant"){
       heading.textContent="🎙️ SmartProperty AI Voice Assistant";
-      description.textContent="Ask about your current dashboard, speak in English, Hindi or Marathi, or listen to your property insights.";
+      description.textContent="Ask about your property insights, then listen to a complete, natural Indian neural voice-over. Choose a male or female voice.";
       assistantControls.hidden=false;
       listen.textContent="🎙️ Ask by voice";
       answer.textContent=args.assistant_answer||"Ask a question to hear an answer based on your current SmartProperty AI dashboard.";
     }else{
       heading.textContent="🎤 Voice Property Search";
-      description.textContent="Say: “Find 2 BHK in Pune under 80 lakh” — then review the filled filters and press Search Properties.";
+      description.textContent="Speak naturally: “Find 2 BHK in Pune under 80 lakh.” Review the filters and press Search Properties.";
       assistantControls.hidden=true;
       listen.textContent="🎙️ Start voice search";
     }
@@ -157,9 +161,14 @@ input{flex:1;min-width:160px}
   listen.addEventListener("click",()=>startRecognition((args.mode||"search")==="assistant"?"assistant":"search"));
   ask.addEventListener("click",()=>submitQuestion(question.value));
   question.addEventListener("keydown",(event)=>{if(event.key==="Enter"){submitQuestion(question.value);}});
-  readDashboard.addEventListener("click",()=>speak(args.dashboard_summary||"Dashboard summary is not available."));
-  readListings.addEventListener("click",()=>speak(args.property_summary||"No recent property results are available."));
-  readAnswer.addEventListener("click",()=>speak(args.assistant_answer||answer.textContent));
+  function requestAudio(type){
+    window.speechSynthesis&&window.speechSynthesis.cancel();
+    send({type:type,language:language.value,gender:gender.value,event_id:String(Date.now())+"-"+Math.random().toString(16).slice(2)});
+    status.textContent="Preparing natural voice audio…";
+  }
+  readDashboard.addEventListener("click",()=>requestAudio("speak_dashboard"));
+  readListings.addEventListener("click",()=>requestAudio("speak_listings"));
+  readAnswer.addEventListener("click",()=>requestAudio("speak_answer"));
   stop.addEventListener("click",()=>{if("speechSynthesis" in window){window.speechSynthesis.cancel();status.textContent="Speech stopped.";}});
   window.addEventListener("message",(event)=>{
     const data=event.data||{};
