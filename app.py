@@ -7,6 +7,7 @@ from pathlib import Path
 import textwrap
 import asyncio
 import json
+import re
 import urllib.parse
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
@@ -320,6 +321,58 @@ hr {
     }
 }
 
+
+/* LIQUID GLASS OVERRIDES — remove dark/black widget surfaces */
+[data-testid="stVerticalBlockBorderWrapper"],
+[data-testid="stHorizontalBlock"],
+[data-testid="stExpander"],
+[data-testid="stPopover"],
+[data-testid="stDataFrame"],
+[data-testid="stTable"],
+[data-testid="stAlert"] {
+    background: rgba(255,255,255,0.22) !important;
+    border: 1px solid rgba(255,255,255,0.72) !important;
+    border-radius: 22px !important;
+    backdrop-filter: blur(28px) saturate(175%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(175%) !important;
+    box-shadow: 0 12px 38px rgba(48,82,130,0.08), inset 0 1px 2px rgba(255,255,255,0.8) !important;
+}
+
+/* All select/radio/slider surfaces use translucent glass, not Streamlit dark defaults. */
+[data-baseweb="select"] > div,
+[data-baseweb="input"] > div,
+[data-baseweb="textarea"] > div,
+[data-testid="stNumberInput"] [data-baseweb="input"] > div,
+[data-testid="stSelectbox"] [data-baseweb="select"] > div,
+[data-testid="stMultiSelect"] [data-baseweb="select"] > div {
+    background: rgba(255,255,255,0.40) !important;
+    color: #172b49 !important;
+    border: 1px solid rgba(255,255,255,0.88) !important;
+    border-radius: 15px !important;
+    box-shadow: inset 0 1px 2px rgba(255,255,255,0.85) !important;
+    backdrop-filter: blur(22px) saturate(170%) !important;
+}
+
+[data-baseweb="select"] *,
+[data-baseweb="input"] input,
+[data-baseweb="textarea"] textarea { color: #172b49 !important; }
+
+[data-testid="stPlotlyChart"],
+[data-testid="stVegaLiteChart"],
+[data-testid="stArrowVegaLiteChart"] {
+    background: rgba(255,255,255,0.16) !important;
+    border: 1px solid rgba(255,255,255,0.62) !important;
+    border-radius: 22px !important;
+    overflow: hidden !important;
+    backdrop-filter: blur(22px) saturate(170%) !important;
+}
+
+[data-testid="stSidebar"] [data-baseweb="select"] > div,
+[data-testid="stSidebar"] [data-baseweb="input"] > div {
+    background: rgba(255,255,255,0.42) !important;
+    color: #172b49 !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -510,7 +563,7 @@ st.components.v1.html("""
             flex-wrap:wrap;
             font-size:13px;
         ">
-            <a href="#featured-properties" target="_parent"
+            <a href="#live-properties" target="_parent"
                style="color:white;text-decoration:none;">Properties</a>
 
             <a href="#ai-insights" target="_parent"
@@ -570,7 +623,7 @@ st.components.v1.html("""
             make smarter real estate decisions with AI-powered insights.
         </div>
 
-        <a href="#featured-properties" target="_parent" style="
+        <a href="#live-properties" target="_parent" style="
             display:inline-block;
             padding:15px 26px;
             border:1px solid rgba(255,255,255,0.85);
@@ -696,72 +749,72 @@ model = train_model(properties)
 
 
 # ==========================================
-# PREMIUM PROPERTY DETAILS SIDEBAR
+# SINGLE API-BASED PROPERTY EXPLORER
+# The old CSV/manual Property Analysis sidebar has been removed.
+# Existing dashboard analytics use a neutral sample record until a live API
+# listing is selected from the Explore Properties results below.
 # ==========================================
 
-with st.sidebar:
+_default_property = properties.iloc[0]
+location = str(_default_property.get("city", "Mumbai") or "Mumbai")
+property_type = str(_default_property.get("property_type", "Apartment") or "Apartment")
+price_lakh = float(_default_property.get("price_lakh", 120) or 120)
+area = max(50, int(float(_default_property.get("area_sqft", 1000) or 1000)))
+age = max(0, int(float(_default_property.get("building_age", 5) or 5)))
+monthly_rent = max(0, int(float(_default_property.get("monthly_rent", 30000) or 30000)))
+compare_location = True
 
-    
-    st.markdown(
-        """
-<div style="
-    background: rgba(255,255,255,0.30);
-    backdrop-filter: blur(25px);
-    -webkit-backdrop-filter: blur(25px);
-    border: 1px solid rgba(255,255,255,0.7);
-    border-radius: 22px;
-    padding: 22px 16px;
-    margin-bottom: 18px;
-    box-shadow: 0 8px 30px rgba(50,100,160,0.12);
-">
-    <div style="color:#377fc1;font-size:12px;font-weight:800;letter-spacing:3px;">
-        SMARTPROPERTY AI
-    </div>
-    <div style="color:#172b49;font-size:23px;font-weight:800;margin-top:12px;">
-        Property Analysis
-    </div>
-    <div style="color:#63758c;font-size:12px;margin-top:8px;">
-        Enter property details for AI analysis. Search real listings in the main Explore Properties section.
-    </div>
-</div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    st.markdown("##### 📍 PROPERTY LOCATION")
-    city_options = sorted(properties["city"].dropna().unique().tolist())
-    default_city = "Mumbai" if "Mumbai" in city_options else (city_options[0] if city_options else "Mumbai")
-    location = st.text_input("City / locality", value=default_city, key="analysis_city").strip() or default_city
-
-    type_options = sorted(properties["property_type"].dropna().unique().tolist())
-    property_type = st.selectbox("Property type", type_options, key="analysis_property_type")
-
-    st.divider()
-    st.markdown("##### 🏡 PROPERTY SPECIFICATIONS")
-    price_lakh = st.number_input(
-        "Asking price (₹ lakh)", min_value=1.0, max_value=10000.0,
-        value=120.0, step=1.0, key="analysis_price_lakh"
-    )
-    area = st.number_input(
-        "Area (sq. ft.)", min_value=50, max_value=100000,
-        value=1000, step=10, key="analysis_area_sqft"
-    )
-    age = st.number_input(
-        "Building age (years)", min_value=0, max_value=150,
-        value=5, step=1, key="analysis_building_age"
-    )
-
-    st.divider()
-    st.markdown("##### 💰 RENTAL INFORMATION")
-    monthly_rent = st.number_input(
-        "Expected monthly rent (₹)", min_value=0, max_value=10000000,
-        value=30000, step=1000, key="analysis_monthly_rent"
-    )
-    st.divider()
-    compare_location = st.checkbox(
-        "Compare with selected location", value=True, key="sidebar_compare_location"
-    )
-    st.caption("Your entered details update the property analysis.")
+# Selecting a live listing in the API results updates these dashboard values
+# on the next Streamlit rerun.
+_selected_live = st.session_state.get("selected_live_property", {})
+if isinstance(_selected_live, dict) and _selected_live:
+    _live_city = _selected_live.get("city") or _selected_live.get("locality") or _selected_live.get("location")
+    if _live_city:
+        location = str(_live_city)
+    _live_type = _selected_live.get("propertyType") or _selected_live.get("property_type") or _selected_live.get("type")
+    if _live_type:
+        property_type = str(_live_type)
+    _live_area = _selected_live.get("areaSqft") or _selected_live.get("area_sqft") or _selected_live.get("area")
+    try:
+        if _live_area:
+            area = max(50, int(float(re.sub(r"[^0-9.]", "", str(_live_area)))))
+    except (TypeError, ValueError):
+        pass
+    _live_age = _selected_live.get("buildingAge") or _selected_live.get("building_age") or _selected_live.get("age")
+    try:
+        if _live_age is not None:
+            age = max(0, int(float(_live_age)))
+    except (TypeError, ValueError):
+        pass
+    _live_price = _selected_live.get("priceLakh") or _selected_live.get("price_lakh")
+    if _live_price is None:
+        _price_raw = _selected_live.get("priceText") or _selected_live.get("price")
+        if isinstance(_price_raw, (int, float)):
+            _live_price = float(_price_raw) / 100000 if float(_price_raw) >= 100000 else float(_price_raw)
+        elif _price_raw:
+            _price_text = str(_price_raw).replace(",", "")
+            _price_number = re.search(r"([0-9]+(?:\.[0-9]+)?)", _price_text)
+            if _price_number:
+                _price_value = float(_price_number.group(1))
+                if "cr" in _price_text.lower() or "crore" in _price_text.lower():
+                    _live_price = _price_value * 100
+                elif "lakh" in _price_text.lower() or re.search(r"\bL\b", _price_text, re.I):
+                    _live_price = _price_value
+                elif "₹" in _price_text or "rs" in _price_text.lower():
+                    _live_price = _price_value / 100000 if _price_value >= 100000 else _price_value
+    try:
+        if _live_price is not None:
+            price_lakh = max(1.0, float(_live_price))
+    except (TypeError, ValueError):
+        pass
+    _live_rent = _selected_live.get("monthlyRent") or _selected_live.get("monthly_rent")
+    try:
+        if _live_rent is not None:
+            monthly_rent = max(0, int(float(_live_rent)))
+        elif str(_selected_live.get("listingType", "")).lower() == "rent" and _live_price is not None:
+            monthly_rent = max(0, int(float(_live_price) * 100000))
+    except (TypeError, ValueError):
+        pass
 
 # Calculations
 price_rupees = price_lakh * 100000
@@ -793,6 +846,8 @@ difference_percent = (
 # Dashboard heading
 st.markdown("## Property Dashboard")
 
+st.caption("Choose ‘Use this listing for AI dashboard’ on any live API result to apply that property’s available details to the dashboard. Until then, dashboard estimates use a sample property from the model dataset.")
+
 st.caption(
     "Your intelligent real estate dashboard powered by "
     "machine learning and property data analytics."
@@ -802,6 +857,7 @@ st.caption(
 # SQUARE YARDS LIVE PROPERTY SEARCH (INDIA)
 # ==========================================
 st.divider()
+st.markdown('<div id="live-properties"></div>', unsafe_allow_html=True)
 st.markdown("## 🌐 Explore Properties Across India")
 st.caption(
     "Search Square Yards' property database for sale listings, rentals, "
@@ -952,6 +1008,16 @@ with st.container(border=True):
                                 listing_url = item.get("url") or item.get("link") or item.get("propertyUrl") or item.get("detailUrl")
                                 if listing_url and str(listing_url).startswith("https://"):
                                     st.link_button("View listing", listing_url, use_container_width=True)
+                                if st.button(
+                                    "Use this listing for AI dashboard",
+                                    key=f"use_live_listing_{listing_id or row_start}_{title[:35]}",
+                                    use_container_width=True
+                                ):
+                                    selected_live = dict(item)
+                                    selected_live.setdefault("city", item.get("city") or live_city)
+                                    selected_live.setdefault("listingType", "Rent" if live_search_type == "Properties for rent" else "Sale")
+                                    st.session_state["selected_live_property"] = selected_live
+                                    st.rerun()
                                 st.divider()
                 else:
                     message = live_payload.get("message") or live_payload.get("note") if isinstance(live_payload, dict) else None
