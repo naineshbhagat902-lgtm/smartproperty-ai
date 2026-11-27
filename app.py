@@ -1223,7 +1223,10 @@ _selected_listing_display = dict(_selected_live) if isinstance(_selected_live, d
 # Keep foreign-currency listings out of the INR-trained model inputs.
 # Their listing details remain available for the dashboard selection notice.
 if _selected_is_international:
+    st.session_state.pop("selected_live_property", None)
     _selected_live = {}
+    _selected_is_international = False
+    _selected_listing_display = {}
 
 if isinstance(_selected_live, dict) and _selected_live:
     _live_city = _selected_live.get("city") or _selected_live.get("locality") or _selected_live.get("location")
@@ -1326,110 +1329,47 @@ st.caption(
     "machine learning and property data analytics."
 )
 
-# ==========================================
-# UNIFIED LIVE PROPERTY SEARCH — INDIA + GLOBAL
-# ==========================================
+# INDIA-ONLY LIVE PROPERTY SEARCH
 st.divider()
 st.markdown('<div id="live-properties"></div>', unsafe_allow_html=True)
-st.markdown("## 🌐 Explore Properties — India & Worldwide")
-st.caption(
-    "Search Indian listings through Square Yards and international listings "
-    "through Untera. Enter a city, locality, state or region in the location field."
-)
+st.markdown("## 🇮🇳 Explore Properties Across India")
+st.caption("Search Indian property listings by city, locality, district or state. This platform is focused exclusively on India.")
+live_country = "India"
+is_india_search = True
 
-country_options = [
-    "India", "United Arab Emirates", "United States", "United Kingdom",
-    "Canada", "Australia", "Singapore", "Portugal", "Spain", "Italy",
-    "France", "Germany", "Netherlands", "Greece", "Turkey", "Thailand",
-    "Japan", "Indonesia", "Malaysia", "Mexico", "Brazil", "South Africa",
-    "New Zealand", "Ireland", "Switzerland", "Austria", "Belgium", "Cyprus",
-    "Croatia", "Poland", "Czechia", "Sweden", "Norway", "Denmark", "Finland",
-    "Romania", "Bulgaria", "Hungary", "Philippines", "Vietnam", "Sri Lanka",
-    "Saudi Arabia", "Qatar", "Oman", "Bahrain", "Other (ISO-2 country code)"
-]
+# Reset old international currency values once during migration.
+if st.session_state.get("_india_only_search_version") != "v1":
+    st.session_state["global_search_min_budget"] = 0
+    st.session_state["global_search_max_budget"] = 200
+    st.session_state["_india_only_search_version"] = "v1"
 
 with st.container(border=True):
-    search_col1, search_col2, search_col3 = st.columns([1.1, 1.3, 1])
+    search_col1, search_col2 = st.columns([1.5, 1])
     with search_col1:
-        live_country = st.selectbox(
-            "Country / market",
-            country_options,
-            index=0,
-            key="global_search_country",
-            help="India uses Square Yards. Other countries use the Untera international listings API."
-        )
-    with search_col2:
         live_city = st.text_input(
-            "City, locality, state or region",
+            "Indian city, locality, district or state",
             value="",
-            placeholder="e.g. Mumbai, Dubai, New York, London",
+            placeholder="e.g. Mumbai, Pune, Thane, Panvel, Maharashtra",
             key="global_search_location"
         ).strip()
-    with search_col3:
+    with search_col2:
         live_search_type = st.selectbox(
-            "Listing purpose",
-            ["For sale", "For rent"],
+            "Listing purpose", ["For sale", "For rent"],
             key="global_search_transaction"
         )
 
     filter_col1, filter_col2, filter_col3, filter_col4 = st.columns(4)
-    is_india_search = live_country == "India"
-    currency_label = "₹ lakh" if is_india_search else "USD"
-    default_max_budget = 200 if is_india_search else 500000
-
-    # Streamlit keeps widget values in session state across reruns. Reset the
-    # budget when the selected market changes so an old USD/INR value is not
-    # accidentally reused with a different currency/unit.
-    current_budget_market = "India" if is_india_search else live_country
-    previous_budget_market = st.session_state.get("_global_search_budget_market")
-    if previous_budget_market != current_budget_market:
-        st.session_state["global_search_min_budget"] = 0
-        st.session_state["global_search_max_budget"] = default_max_budget
-        st.session_state["_global_search_budget_market"] = current_budget_market
-
-    st.caption(
-        "India budgets are entered in ₹ lakh (for example, 50 = ₹50 lakh; "
-        "100 = ₹1 crore). International budgets are entered in USD."
-    )
-
+    currency_label = "₹ lakh"
+    default_max_budget = 200
+    st.caption("Enter budgets in ₹ lakh (50 = ₹50 lakh; 100 = ₹1 crore). Choose Bedrooms = Any to broaden your search.")
     with filter_col1:
-        live_min_budget = st.number_input(
-            f"Minimum budget ({currency_label})",
-            min_value=0,
-            value=0,
-            step=5 if is_india_search else 10000,
-            key="global_search_min_budget"
-        )
+        live_min_budget = st.number_input("Minimum budget (₹ lakh)", min_value=0, value=0, step=5, key="global_search_min_budget")
     with filter_col2:
-        live_max_budget = st.number_input(
-            f"Maximum budget ({currency_label})",
-            min_value=0,
-            value=default_max_budget,
-            step=5 if is_india_search else 25000,
-            key="global_search_max_budget"
-        )
+        live_max_budget = st.number_input("Maximum budget (₹ lakh)", min_value=0, value=default_max_budget, step=5, key="global_search_max_budget")
     with filter_col3:
-        live_bhk = st.selectbox(
-            "Bedrooms",
-            ["Any", "1", "2", "3", "4", "5"],
-            key="global_search_bedrooms"
-        )
+        live_bhk = st.selectbox("Bedrooms", ["Any", "1", "2", "3", "4", "5"], key="global_search_bedrooms")
     with filter_col4:
-        live_result_count = st.selectbox(
-            "Results to show", [5, 10, 20, 30, 50], index=1,
-            key="global_search_result_count"
-        )
-
-    other_country_code = ""
-    if live_country == "Other (ISO-2 country code)":
-        other_country_code = st.text_input(
-            "Country ISO-2 code",
-            placeholder="e.g. AE, PT, JP",
-            max_chars=2,
-            key="global_search_other_country"
-        ).strip().upper()
-        st.caption("Use the two-letter country code, for example AE = UAE, PT = Portugal, JP = Japan.")
-
+        live_result_count = st.selectbox("Results to show", [5, 10, 20, 30, 50], index=1, key="global_search_result_count")
     run_live_search = st.button(
         "🔎 Search Properties",
         type="primary",
@@ -1442,8 +1382,6 @@ with st.container(border=True):
             st.warning("Enter a city, locality, state or region before searching.")
         elif live_max_budget and live_min_budget > live_max_budget:
             st.warning("Minimum budget cannot be greater than maximum budget.")
-        elif live_country == "Other (ISO-2 country code)" and not re.fullmatch(r"[A-Z]{2}", other_country_code):
-            st.warning("Enter a valid two-letter ISO country code, such as AE or PT.")
         else:
             try:
                 if is_india_search:
