@@ -899,11 +899,13 @@ def _wikimedia_photo_candidates(title, place, city, country):
             result_tokens = _photo_search_tokens(searchable)
             locality_hits = result_tokens.intersection(local_terms)
             architecture_hits = result_tokens.intersection(architecture_terms)
-            # At least one actual locality/building term and one property/architecture
-            # term must be present. Country-only matches are intentionally rejected.
-            if locality_hits and architecture_hits:
+            # The API query already asks for architecture/property images.
+            # Requiring the image's title/description to repeat an architecture
+            # keyword was too strict and caused empty cards for many localities.
+            # Require a real locality token instead; never accept country-only hits.
+            if locality_hits:
                 seen.add(candidate_url)
-                ranked.append((len(locality_hits) + len(architecture_hits), candidate))
+                ranked.append((len(locality_hits) * 3 + len(architecture_hits), candidate))
     ranked.sort(key=lambda pair: pair[0], reverse=True)
     return [candidate for _, candidate in ranked[:5]]
 
