@@ -601,6 +601,24 @@ def _untera_image(record):
     if not isinstance(record, (dict, list)):
         return None
 
+    # Untera's developer example exposes listing photos as images[0].
+    # Check that documented shape first, then fall back to nested-field scanning.
+    if isinstance(record, dict):
+        raw_images = record.get("images") or record.get("photos") or []
+        if isinstance(raw_images, str):
+            raw_images = [raw_images]
+        if isinstance(raw_images, dict):
+            raw_images = [raw_images]
+        if isinstance(raw_images, list):
+            for photo in raw_images:
+                if isinstance(photo, str) and photo.strip().startswith(("https://", "http://")):
+                    return photo.strip()
+                if isinstance(photo, dict):
+                    for photo_key in ("url", "src", "image_url", "imageUrl", "original", "large"):
+                        photo_url = photo.get(photo_key)
+                        if isinstance(photo_url, str) and photo_url.strip().startswith(("https://", "http://")):
+                            return photo_url.strip()
+
     image_keys = {
         "image", "images", "imageurl", "imageurls", "image_url",
         "photo", "photos", "photourl", "photourls", "photo_url",
@@ -659,6 +677,18 @@ def _untera_image(record):
         return None
 
     return walk(record)
+
+
+def _fallback_property_image(title="", property_type=""):
+    """Return an illustrative property photo when the listing API has no photo."""
+    description = f"{title} {property_type}".casefold()
+    if "villa" in description or "house" in description:
+        return "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85"
+    if "bedroom" in description or "apartment" in description or "flat" in description:
+        return "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=85"
+    if "office" in description or "commercial" in description:
+        return "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=85"
+    return "https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?auto=format&fit=crop&w=1200&q=85"
 
 
 def _country_code_from_label(country_label):
@@ -1308,16 +1338,17 @@ with st.container(border=True):
                                         except (TypeError, ValueError):
                                             area_value = str(area_value)
 
-                                if image_url:
-                                    st.image(image_url, use_container_width=True)
-                                else:
-                                    st.markdown(
-                                        "<div style='height:180px;border-radius:14px;background:rgba(255,255,255,.48);"
-                                        "border:1px solid rgba(255,255,255,.8);display:flex;align-items:center;"
-                                        "justify-content:center;color:#687991;font-weight:600;'>"
-                                        "Photo unavailable in this listing's API data</div>",
-                                        unsafe_allow_html=True
-                                    )
+                                # Use the genuine provider photo whenever one is available.
+                                # If the API omits it, show a clearly labelled illustrative photo
+                                # instead of leaving a large empty image panel.
+                                illustrative_photo = not bool(image_url)
+                                if illustrative_photo:
+                                    property_type_for_image = _first_value(item, "type", "property_type", "propertyType") or ""
+                                    image_url = _fallback_property_image(title, property_type_for_image)
+
+                                st.image(image_url, use_container_width=True)
+                                if illustrative_photo:
+                                    st.caption("Illustrative property photo — actual listing photo not supplied by the API")
 
                                 st.markdown(f"**{title}**")
                                 if place:
