@@ -381,6 +381,12 @@ hr {
 
 
 BASE_DIR = Path(__file__).parent
+
+# Browser-native voice features. No paid speech API or extra Python package is required.
+_smartproperty_voice = st.components.v1.declare_component(
+    "smartproperty_voice",
+    path=str(BASE_DIR / "voice_component")
+)
 # Support the normal project path and the CSV filename uploaded for this update.
 DATA_CANDIDATES = [
     BASE_DIR / "data" / "properties.csv",
@@ -406,6 +412,161 @@ def normalize_squareyards_location(value):
         "calcutta": "Kolkata",
     }
     return aliases.get(raw.casefold(), raw)
+
+
+# ==========================================
+# SMARTPROPERTY AI — FREE BROWSER VOICE SUITE
+# ==========================================
+
+def _voice_amount_to_lakh(raw_value, unit=""):
+    """Convert spoken Indian budget amounts to the app's ₹ lakh unit."""
+    try:
+        value = float(str(raw_value).replace(",", ""))
+    except (TypeError, ValueError):
+        return None
+    unit = str(unit or "").casefold()
+    if unit.startswith(("crore", "cr")):
+        return value * 100
+    if unit.startswith(("lakh", "lac", "l")):
+        return value
+    return value / 100000 if value >= 100000 else value
+
+
+def _parse_voice_property_search(transcript):
+    """Extract a city, BHK, transaction type and ₹ lakh budget from speech."""
+    text = re.sub(r"\s+", " ", str(transcript or "").strip().casefold())
+    parsed = {}
+
+    number_words = {
+        "one": "1", "two": "2", "three": "3", "four": "4", "five": "5",
+        "six": "6", "seven": "7", "eight": "8", "nine": "9",
+    }
+    for word, digit in number_words.items():
+        text = re.sub(rf"\b{word}\b", digit, text)
+
+    bhk_match = re.search(r"\b([1-5])\s*(?:bhk|bedrooms?|beds?)\b", text)
+    if bhk_match:
+        parsed["bedrooms"] = bhk_match.group(1)
+
+    if re.search(r"\b(rent|rental|lease|to let)\b", text):
+        parsed["transaction"] = "For rent"
+    elif re.search(r"\b(buy|purchase|sale|sell|for sale)\b", text):
+        parsed["transaction"] = "For sale"
+
+    amount_pattern = r"([\d,]+(?:\.\d+)?)\s*(crores?|cr|lakhs?|lacs?|lac|l)?"
+    between_match = re.search(
+        rf"\bbetween\s+{amount_pattern}\s+and\s+{amount_pattern}", text
+    )
+    if between_match:
+        first_unit = between_match.group(2) or between_match.group(4) or ""
+        second_unit = between_match.group(4) or first_unit
+        minimum = _voice_amount_to_lakh(between_match.group(1), first_unit)
+        maximum = _voice_amount_to_lakh(between_match.group(3), second_unit)
+        if minimum is not None and maximum is not None:
+            parsed["min_budget"] = int(minimum)
+            parsed["max_budget"] = int(maximum)
+    else:
+        under_match = re.search(
+            rf"\b(?:under|below|less than|maximum|max|up to|upto)\s+{amount_pattern}",
+            text
+        )
+        over_match = re.search(
+            rf"\b(?:above|over|more than|minimum|min|at least)\s+{amount_pattern}",
+            text
+        )
+        budget_match = re.search(rf"\b(?:budget|around|approximately)\s+{amount_pattern}", text)
+        if under_match:
+            parsed["max_budget"] = int(_voice_amount_to_lakh(under_match.group(1), under_match.group(2)) or 0)
+        if over_match:
+            parsed["min_budget"] = int(_voice_amount_to_lakh(over_match.group(1), over_match.group(2)) or 0)
+        if budget_match and "max_budget" not in parsed:
+            amount = _voice_amount_to_lakh(budget_match.group(1), budget_match.group(2))
+            if amount is not None:
+                parsed["max_budget"] = int(amount)
+
+    # Location is taken only from an explicit "in / at / near" phrase.
+    stop_phrase = (
+        r"\s+(?:under|below|less than|between|above|over|more than|"
+        r"minimum|maximum|budget|around|approximately|with|for sale|"
+        r"for rent|to rent|rent|sale|buy|purchase)\b"
+    )
+    location_match = re.search(
+        rf"\b(?:in|at|near)\s+(.+?)(?={stop_phrase}|$)", text
+    )
+    if location_match:
+        city = location_match.group(1).strip(" .,!?:;")
+        city = re.sub(r"^(?:the city of|city of)\s+", "", city)
+        if city and len(city) <= 70:
+            parsed["city"] = " ".join(word.capitalize() for word in city.split())
+
+    return parsed
+
+
+def _build_voice_assistant_answer(question):
+    """Answer from current SmartProperty AI values and recent live Indian listings."""
+    q = str(question or "").casefold()
+    recent = st.session_state.get("voice_last_results", [])
+    current_city = str(globals().get("location", "your selected Indian city"))
+    current_type = str(globals().get("property_type", "property"))
+    current_price = float(globals().get("price_lakh", 0) or 0)
+    predicted = float(globals().get("predicted_lakh", 0) or 0)
+    area_sqft = int(globals().get("area", 0) or 0)
+    rent = int(globals().get("monthly_rent", 0) or 0)
+    gross_yield_value = float(globals().get("gross_yield", 0) or 0)
+
+    if any(word in q for word in ("latest listing", "search result", "properties found", "show properties", "available properties", "listings")) and recent:
+        lines = []
+        for index, item in enumerate(recent[:3], start=1):
+            lines.append(
+                f"{index}. {item.get('title', 'Property listing')}, "
+                f"{item.get('place', current_city)}. "
+                f"Price: {item.get('price', 'not supplied')}. "
+                f"Configuration: {item.get('bedrooms', 'not supplied')}."
+            )
+        return "Here are the latest property results from your India-only search. " + " ".join(lines)
+
+    if any(word in q for word in ("emi", "loan", "afford", "home budget")):
+        affordable_budget = globals().get("estimated_home_budget")
+        monthly_emi = globals().get("estimated_emi")
+        if affordable_budget is not None and monthly_emi is not None:
+            return (
+                f"Based on the values entered in your affordability calculator, "
+                f"your estimated home budget is ₹{float(affordable_budget):,.0f}, "
+                f"and the estimated monthly EMI is ₹{float(monthly_emi):,.0f}. "
+                "These are estimates, not a bank loan approval."
+            )
+        return "Please complete the Home Affordability Calculator first. I can then read its estimated budget and EMI."
+
+    if any(word in q for word in ("yield", "rental return", "rent return")):
+        return (
+            f"For the current dashboard property in {current_city}, the estimated monthly rent is "
+            f"₹{rent:,.0f} and the gross rental yield is {gross_yield_value:.2f} percent. "
+            "This is an estimate and does not include every ownership expense."
+        )
+
+    if any(word in q for word in ("area", "size", "square feet", "sq ft")):
+        return f"The current dashboard uses an area of {area_sqft:,} square feet for the {current_type} in {current_city}."
+
+    if any(word in q for word in ("where", "location", "city", "locality")):
+        return f"The current dashboard property location is {current_city}, India."
+
+    if any(word in q for word in ("price", "value", "cost", "expensive", "cheap")):
+        answer = (
+            f"The current dashboard asking price is ₹{current_price:,.2f} lakh. "
+        )
+        if predicted > 0:
+            answer += f"The machine learning model estimates ₹{predicted:,.2f} lakh. "
+        answer += "The model value is an estimate, not a verified market valuation."
+        return answer
+
+    return (
+        f"Welcome to SmartProperty AI. The current dashboard is showing a {current_type} "
+        f"in {current_city}, India, with an asking price of ₹{current_price:,.2f} lakh, "
+        f"an area of {area_sqft:,} square feet and an estimated gross rental yield of "
+        f"{gross_yield_value:.2f} percent. You can ask me about price, location, area, "
+        "rental yield, recent search results or your home-loan estimate."
+    )
+
 
 
 def _find_listing_image(value, depth=0, image_context=False):
@@ -1344,6 +1505,42 @@ if st.session_state.get("_india_only_search_version") != "v1":
     st.session_state["_india_only_search_version"] = "v1"
 
 with st.container(border=True):
+    voice_search_event = _smartproperty_voice(
+        mode="search",
+        key="smartproperty_voice_search",
+        default=None
+    )
+    if isinstance(voice_search_event, dict):
+        event_id = str(voice_search_event.get("event_id") or "")
+        if event_id and event_id != st.session_state.get("_voice_search_event_id"):
+            st.session_state["_voice_search_event_id"] = event_id
+            transcript = str(voice_search_event.get("transcript") or "").strip()
+            parsed_voice = _parse_voice_property_search(transcript)
+            if parsed_voice.get("city"):
+                st.session_state["global_search_location"] = parsed_voice["city"]
+            if parsed_voice.get("bedrooms"):
+                st.session_state["global_search_bedrooms"] = parsed_voice["bedrooms"]
+            if parsed_voice.get("transaction"):
+                st.session_state["global_search_transaction"] = parsed_voice["transaction"]
+            if parsed_voice.get("min_budget") is not None:
+                st.session_state["global_search_min_budget"] = max(0, parsed_voice["min_budget"])
+            if parsed_voice.get("max_budget") is not None:
+                st.session_state["global_search_max_budget"] = max(0, parsed_voice["max_budget"])
+            if parsed_voice.get("city"):
+                st.session_state["_voice_search_notice"] = (
+                    f'Voice search filled the filters for {parsed_voice["city"]}. '
+                    "Review the values and press Search Properties."
+                )
+            else:
+                st.session_state["_voice_search_notice"] = (
+                    "I heard: " + transcript + ". I could not confidently identify a city. "
+                    "Please enter the Indian city or locality manually, then press Search Properties."
+                )
+            st.rerun()
+
+    if st.session_state.get("_voice_search_notice"):
+        st.info(st.session_state.pop("_voice_search_notice"))
+
     search_col1, search_col2 = st.columns([1.5, 1])
     with search_col1:
         live_city = st.text_input(
@@ -1425,6 +1622,15 @@ with st.container(border=True):
                             seen_listing_keys.add(dedupe_key)
                             unique_rows.append(candidate)
                     live_rows = unique_rows
+                    st.session_state["voice_last_results"] = [
+                        {
+                            "title": str(_first_value(item, "title", "name") or "Property listing"),
+                            "place": str(_first_value(item, "address", "locality", "city") or display_location),
+                            "price": str(_first_value(item, "priceText", "price") or "Price not supplied"),
+                            "bedrooms": str(_first_value(item, "bhk", "bedrooms") or "Not supplied"),
+                        }
+                        for item in live_rows[:10] if isinstance(item, dict)
+                    ]
                     seen_photo_urls = set()
                     st.success(
                         f"Found {len(live_rows)} unique {live_search_type.lower()} result(s) "
@@ -3100,4 +3306,60 @@ st.caption(
     "It excludes loan interest, taxes, vacancy and other "
     "costs unless included above. Future values are estimates, "
     "not guaranteed returns."
+)
+
+
+# ==========================================
+# SMARTPROPERTY AI — VOICE ASSISTANT & READ-ALOUD
+# ==========================================
+st.divider()
+st.markdown("## 🎙️ Talk to SmartProperty AI")
+st.caption(
+    "Ask questions about the current Indian property dashboard, or listen to "
+    "your dashboard and recent property search results. Answers use the data "
+    "already shown in this app; no paid voice or AI API is called."
+)
+
+_voice_current_summary = (
+    f"SmartProperty AI dashboard. Location: {location}, India. "
+    f"Property type: {property_type}. Asking price: {price_lakh:,.2f} lakh rupees. "
+    f"AI estimated value: {predicted_lakh:,.2f} lakh rupees. "
+    f"Area: {area:,} square feet. Monthly rent estimate: {monthly_rent:,.0f} rupees. "
+    f"Gross rental yield: {gross_yield:.2f} percent. "
+    "All model outputs are estimates and should be independently verified."
+)
+_voice_recent_summary = " ".join(
+    f"Listing {index + 1}: {item.get('title', 'Property listing')}, "
+    f"{item.get('place', '')}, price {item.get('price', 'not supplied')}, "
+    f"configuration {item.get('bedrooms', 'not supplied')}."
+    for index, item in enumerate(st.session_state.get("voice_last_results", [])[:10])
+) or "No recent live property search results are stored yet."
+
+_voice_assistant_event = _smartproperty_voice(
+    mode="assistant",
+    key="smartproperty_voice_assistant",
+    dashboard_summary=_voice_current_summary,
+    property_summary=_voice_recent_summary,
+    assistant_answer=st.session_state.get("voice_assistant_answer", ""),
+    default=None
+)
+
+if isinstance(_voice_assistant_event, dict):
+    _voice_event_id = str(_voice_assistant_event.get("event_id") or "")
+    if (
+        _voice_event_id
+        and _voice_event_id != st.session_state.get("_voice_assistant_event_id")
+        and _voice_assistant_event.get("type") == "assistant_question"
+    ):
+        st.session_state["_voice_assistant_event_id"] = _voice_event_id
+        _voice_question = str(_voice_assistant_event.get("question") or "").strip()
+        if _voice_question:
+            st.session_state["voice_assistant_question"] = _voice_question
+            st.session_state["voice_assistant_answer"] = _build_voice_assistant_answer(_voice_question)
+            st.rerun()
+
+st.caption(
+    "Privacy note: speech recognition is provided by your browser. The app does not "
+    "save microphone recordings. Browser support varies; Chrome or Edge is recommended "
+    "for voice recognition. Read-aloud uses your browser's built-in speech voices."
 )
