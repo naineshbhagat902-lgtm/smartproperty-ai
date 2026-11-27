@@ -592,103 +592,62 @@ def _first_value(record, *keys):
     return None
 
 
-def _untera_image(record):
-    """
-    Extract a real listing photo URL from Untera's response.
-    Supports common API variations such as images[], photos[], imageUrl,
-    primaryImage, thumbnail, and nested media/gallery objects.
-    """
-    if not isinstance(record, (dict, list)):
-        return None
-
-    # Untera's developer example exposes listing photos as images[0].
-    # Check that documented shape first, then fall back to nested-field scanning.
-    if isinstance(record, dict):
-        raw_images = record.get("images") or record.get("photos") or []
-        if isinstance(raw_images, str):
-            raw_images = [raw_images]
-        if isinstance(raw_images, dict):
-            raw_images = [raw_images]
-        if isinstance(raw_images, list):
-            for photo in raw_images:
-                if isinstance(photo, str) and photo.strip().startswith(("https://", "http://")):
-                    return photo.strip()
-                if isinstance(photo, dict):
-                    for photo_key in ("url", "src", "image_url", "imageUrl", "original", "large"):
-                        photo_url = photo.get(photo_key)
-                        if isinstance(photo_url, str) and photo_url.strip().startswith(("https://", "http://")):
-                            return photo_url.strip()
-
+def _listing_image_urls(record):
+    """Return distinct real image URLs found in provider image/photo fields only."""
     image_keys = {
-        "image", "images", "imageurl", "imageurls", "image_url",
-        "photo", "photos", "photourl", "photourls", "photo_url",
-        "picture", "pictures", "pictureurl", "picture_url",
-        "thumbnail", "thumbnailurl", "thumbnail_url",
-        "cover", "coverimage", "cover_image",
-        "primaryimage", "primary_image", "mainimage", "main_image",
-        "propertyimage", "propertyimages", "property_image",
-        "listingimage", "listingimages", "listing_image",
-        "media", "gallery", "galleryimages", "gallery_images",
+        "image", "images", "imageurl", "imageurls", "image_url", "photo", "photos",
+        "photourl", "photourls", "photo_url", "picture", "pictures", "pictureurl",
+        "picture_url", "thumbnail", "thumbnailurl", "thumbnail_url", "cover",
+        "coverimage", "cover_image", "primaryimage", "primary_image", "mainimage",
+        "main_image", "propertyimage", "propertyimages", "property_image",
+        "listingimage", "listingimages", "listing_image", "media", "gallery",
+        "galleryimages", "gallery_images",
     }
-    url_keys = {
-        "url", "src", "href", "secure_url", "original",
-        "original_url", "large", "medium", "full", "image_url",
-        "imageurl", "photo_url", "photourl",
-    }
+    url_keys = {"url", "src", "href", "secure_url", "original", "original_url",
+                "large", "medium", "full", "image_url", "imageurl", "photo_url", "photourl"}
+    image_keys = {re.sub(r"[^a-z0-9]", "", k.casefold()) for k in image_keys}
+    url_keys = {re.sub(r"[^a-z0-9]", "", k.casefold()) for k in url_keys}
+    found, seen = [], set()
+
+    def add(candidate):
+        if not isinstance(candidate, str):
+            return
+        candidate = candidate.strip()
+        if not candidate.startswith(("https://", "http://")):
+            return
+        # The provider may use CDN URLs without a file extension; the enclosing
+        # images/photos field is the signal that this URL represents a photo.
+        if candidate not in seen:
+            seen.add(candidate)
+            found.append(candidate)
 
     def walk(value, image_context=False, depth=0):
-        if depth > 12:
-            return None
-
+        if depth > 14:
+            return
         if isinstance(value, str):
-            candidate = value.strip()
-            if image_context and candidate.startswith(("https://", "http://")):
-                return candidate
-            return None
-
-        if isinstance(value, list):
+            if image_context:
+                add(value)
+        elif isinstance(value, list):
             for child in value:
-                found = walk(child, image_context, depth + 1)
-                if found:
-                    return found
-            return None
-
-        if isinstance(value, dict):
-            # Prefer direct URL properties inside an image/photo object.
+                walk(child, image_context, depth + 1)
+        elif isinstance(value, dict):
+            # URLs inside photo objects are valid only when nested below a photo field.
             for key, child in value.items():
                 normalized = re.sub(r"[^a-z0-9]", "", str(key).casefold())
-                if image_context and normalized in {
-                    re.sub(r"[^a-z0-9]", "", k) for k in url_keys
-                }:
-                    found = walk(child, True, depth + 1)
-                    if found:
-                        return found
-
-            # Then inspect all fields, carrying image context through image-like keys.
+                if image_context and normalized in url_keys:
+                    walk(child, True, depth + 1)
             for key, child in value.items():
                 normalized = re.sub(r"[^a-z0-9]", "", str(key).casefold())
-                is_image_field = normalized in {
-                    re.sub(r"[^a-z0-9]", "", k) for k in image_keys
-                }
-                found = walk(child, image_context or is_image_field, depth + 1)
-                if found:
-                    return found
+                walk(child, image_context or normalized in image_keys, depth + 1)
 
-        return None
-
-    return walk(record)
+    walk(record)
+    return found
 
 
-def _fallback_property_image(title="", property_type=""):
-    """Return an illustrative property photo when the listing API has no photo."""
-    description = f"{title} {property_type}".casefold()
-    if "villa" in description or "house" in description:
-        return "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85"
-    if "bedroom" in description or "apartment" in description or "flat" in description:
-        return "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=85"
-    if "office" in description or "commercial" in description:
-        return "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=85"
-    return "https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?auto=format&fit=crop&w=1200&q=85"
+def _untera_image(record):
+    """Return the first genuine photo URL supplied in an Untera listing record."""
+    urls = _listing_image_urls(record)
+    return urls[0] if urls else None
 
 
 def _country_code_from_label(country_label):
@@ -1271,8 +1230,23 @@ with st.container(border=True):
                     currency_code = "USD"
 
                 if live_rows:
+                    # Remove duplicate listing records before rendering cards.
+                    unique_rows = []
+                    seen_listing_keys = set()
+                    for candidate in live_rows:
+                        if not isinstance(candidate, dict):
+                            continue
+                        candidate_id = _first_value(candidate, "id", "listing_id", "listingId", "propertyId", "propertyid")
+                        candidate_title = str(_first_value(candidate, "title", "name") or "").strip().casefold()
+                        candidate_place = str(_first_value(candidate, "address", "locality", "location", "city") or "").strip().casefold()
+                        dedupe_key = (str(candidate_id).strip() if candidate_id else f"{candidate_title}|{candidate_place}")
+                        if dedupe_key and dedupe_key not in seen_listing_keys:
+                            seen_listing_keys.add(dedupe_key)
+                            unique_rows.append(candidate)
+                    live_rows = unique_rows
+                    seen_photo_urls = set()
                     st.success(
-                        f"Found {len(live_rows)} {live_search_type.lower()} result(s) "
+                        f"Found {len(live_rows)} unique {live_search_type.lower()} result(s) "
                         f"for {display_location}. Showing up to {len(live_rows)}."
                     )
                     for row_start in range(0, len(live_rows), 2):
@@ -1293,14 +1267,14 @@ with st.container(border=True):
                                         price_display = str(price_value) if price_value is not None else "Price not supplied"
                                     area_value = _first_value(item, "areaSqft", "areaText", "area")
                                     bedrooms_value = _first_value(item, "bhk", "bedrooms")
-                                    image_url = _find_listing_image(item)
+                                    image_candidates = _listing_image_urls(item)
                                     listing_id = _first_value(item, "id", "propertyId", "propertyid")
-                                    if not image_url and listing_id:
+                                    if not image_candidates and listing_id:
                                         try:
                                             detail_payload = squareyards_listing_details(listing_id)
-                                            image_url = _find_listing_image(detail_payload)
+                                            image_candidates = _listing_image_urls(detail_payload)
                                         except Exception:
-                                            image_url = None
+                                            image_candidates = []
                                     listing_url = _first_value(item, "url", "link", "propertyUrl", "detailUrl")
                                     map_location = _first_value(item, "address", "locality", "location") or place or display_location
                                     map_country = "India"
@@ -1321,13 +1295,13 @@ with st.container(border=True):
                                     area_value = _first_value(item, "area_sqm", "areaSqm", "size_sqm", "area")
                                     bedrooms_value = _first_value(item, "bedrooms", "beds")
                                     listing_id = _first_value(item, "id", "listing_id", "listingId")
-                                    image_url = _untera_image(item)
+                                    image_candidates = _listing_image_urls(item)
 
                                     # Search results normally include images. If a result has
-                                    # no photo URL, try the documented full-listing endpoint.
-                                    if not image_url and listing_id:
+                                    # no photo URL, try the listing detail endpoint once.
+                                    if not image_candidates and listing_id:
                                         detail_payload = untera_listing_details(listing_id)
-                                        image_url = _untera_image(detail_payload)
+                                        image_candidates = _listing_image_urls(detail_payload)
 
                                     listing_url = _first_value(item, "url", "listing_url", "source_url", "sourceUrl", "listingUrl")
                                     map_location = _first_value(item, "address", "location", "city") or display_location
@@ -1338,17 +1312,25 @@ with st.container(border=True):
                                         except (TypeError, ValueError):
                                             area_value = str(area_value)
 
-                                # Use the genuine provider photo whenever one is available.
-                                # If the API omits it, show a clearly labelled illustrative photo
-                                # instead of leaving a large empty image panel.
-                                illustrative_photo = not bool(image_url)
-                                if illustrative_photo:
-                                    property_type_for_image = _first_value(item, "type", "property_type", "propertyType") or ""
-                                    image_url = _fallback_property_image(title, property_type_for_image)
-
-                                st.image(image_url, use_container_width=True)
-                                if illustrative_photo:
-                                    st.caption("Illustrative property photo — actual listing photo not supplied by the API")
+                                # Never reuse one property's photo for another listing.
+                                # If the provider has no unique actual photo, show an honest placeholder.
+                                image_url = next(
+                                    (candidate for candidate in image_candidates if candidate not in seen_photo_urls),
+                                    None
+                                )
+                                if image_url:
+                                    seen_photo_urls.add(image_url)
+                                    st.image(image_url, use_container_width=True)
+                                    st.caption(f"Actual listing photo supplied by {provider_name}")
+                                else:
+                                    st.markdown(
+                                        "<div style='height:210px;display:flex;align-items:center;justify-content:center;"
+                                        "border:1px dashed rgba(90,120,160,.45);border-radius:18px;"
+                                        "background:rgba(255,255,255,.30);color:#60748d;text-align:center;padding:18px;'>"
+                                        "<div><div style='font-size:34px;'>🏡</div>"
+                                        "<b>Actual photo not provided</b><br><small>We won't substitute a random property image.</small></div></div>",
+                                        unsafe_allow_html=True
+                                    )
 
                                 st.markdown(f"**{title}**")
                                 if place:
@@ -1427,7 +1409,7 @@ st.caption(
     "Data note: Square Yards listings are informational and may not reflect "
     "current availability or final transaction prices. Verify details with the listing provider. "
     "The AI estimate uses a sample-data model and is not a live market valuation. "
-    "Listing photos appear only when Square Yards supplies a genuine photo URL; missing photos are not fabricated."
+    "Only unique photo URLs supplied by the listing provider are displayed. Missing or repeated photos are shown as unavailable, never replaced with stock images."
 )
 
 # ==========================================
