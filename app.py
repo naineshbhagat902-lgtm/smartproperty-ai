@@ -9,6 +9,8 @@ import asyncio
 import json
 import re
 import urllib.parse
+import urllib.request
+import urllib.error
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.pipeline import Pipeline
@@ -482,6 +484,123 @@ def squareyards_listing_details(property_id):
     ))
 
 
+
+UNTERA_API_BASE = "https://api.untera.io/api/v1"
+
+
+def get_untera_api_key():
+    """Read the API key from Streamlit Secrets; never hard-code it."""
+    try:
+        return st.secrets.get("UNTERA_API_KEY", "")
+    except Exception:
+        return ""
+
+
+def untera_search(country_code, location_text, transaction, min_price, max_price,
+                  min_beds, page_size, _cache_version="v1"):
+    """Search Untera listings. The API key is read at request time from Secrets."""
+    api_key = get_untera_api_key()
+    if not api_key:
+        raise RuntimeError(
+            "Untera API key not found. Add UNTERA_API_KEY in Streamlit Cloud → "
+            "App settings → Secrets, then redeploy."
+        )
+
+    params = {
+        "country": country_code.upper(),
+        "page": 1,
+        "pageSize": min(50, max(1, int(page_size))),
+    }
+    if location_text:
+        params["location"] = location_text
+    if transaction:
+        params["transaction"] = transaction
+    if min_price is not None:
+        params["minPrice"] = int(min_price)
+    if max_price is not None:
+        params["maxPrice"] = int(max_price)
+    if min_beds is not None:
+        params["minBeds"] = int(min_beds)
+
+    url = f"{UNTERA_API_BASE}/listings/search?{urllib.parse.urlencode(params)}"
+    request = urllib.request.Request(
+        url,
+        headers={
+            "X-API-Key": api_key,
+            "Accept": "application/json",
+            "User-Agent": "SmartPropertyAI/1.0",
+        },
+        method="GET",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=25) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode("utf-8", errors="replace")[:500]
+        if error.code == 401:
+            raise RuntimeError("Untera rejected the API key (401). Check UNTERA_API_KEY in Streamlit Secrets.") from error
+        if error.code == 429:
+            raise RuntimeError("Untera rate limit reached (429). Wait a little and try again.") from error
+        raise RuntimeError(f"Untera API returned HTTP {error.code}: {detail}") from error
+    except TimeoutError as error:
+        raise RuntimeError("Untera took too long to respond. Please retry.") from error
+    except urllib.error.URLError as error:
+        raise RuntimeError(f"Could not connect to Untera: {error.reason}") from error
+
+    if not isinstance(payload, dict):
+        raise RuntimeError("Untera returned an unexpected response format.")
+    if payload.get("error"):
+        err = payload["error"]
+        if isinstance(err, dict):
+            raise RuntimeError(str(err.get("message") or err.get("code") or err))
+        raise RuntimeError(str(err))
+    return payload
+
+
+def _first_value(record, *keys):
+    for key in keys:
+        value = record.get(key)
+        if value not in (None, "", [], {}):
+            return value
+    return None
+
+
+def _untera_image(record):
+    images = record.get("images") or record.get("photos") or []
+    if isinstance(images, str):
+        return images if images.startswith(("https://", "http://")) else None
+    if isinstance(images, list):
+        for image in images:
+            if isinstance(image, str) and image.startswith(("https://", "http://")):
+                return image
+            if isinstance(image, dict):
+                candidate = _first_value(image, "url", "src", "image_url")
+                if candidate and str(candidate).startswith(("https://", "http://")):
+                    return candidate
+    return _find_listing_image(record)
+
+
+def _country_code_from_label(country_label):
+    """Country label to ISO-3166 alpha-2 code for Untera."""
+    country_codes = {
+        "United Arab Emirates": "AE", "UAE": "AE", "United States": "US",
+        "USA": "US", "United Kingdom": "GB", "UK": "GB", "Canada": "CA",
+        "Australia": "AU", "Singapore": "SG", "Portugal": "PT", "Spain": "ES",
+        "Italy": "IT", "France": "FR", "Germany": "DE", "Netherlands": "NL",
+        "Greece": "GR", "Turkey": "TR", "Türkiye": "TR", "Thailand": "TH",
+        "Japan": "JP", "Indonesia": "ID", "Malaysia": "MY", "Mexico": "MX",
+        "Brazil": "BR", "South Africa": "ZA", "New Zealand": "NZ",
+        "Ireland": "IE", "Switzerland": "CH", "Austria": "AT", "Belgium": "BE",
+        "Cyprus": "CY", "Croatia": "HR", "Poland": "PL", "Czechia": "CZ",
+        "Czech Republic": "CZ", "Sweden": "SE", "Norway": "NO", "Denmark": "DK",
+        "Finland": "FI", "Romania": "RO", "Bulgaria": "BG", "Hungary": "HU",
+        "Philippines": "PH", "Vietnam": "VN", "Sri Lanka": "LK",
+        "Saudi Arabia": "SA", "Qatar": "QA", "Oman": "OM", "Bahrain": "BH",
+        "India": "IN",
+    }
+    return country_codes.get(country_label, "")
+
+
 def _extract_squareyards_rows(payload, preferred_keys):
     """Handle MCP structured output and JSON/text-wrapped output safely."""
     if not isinstance(payload, dict):
@@ -767,6 +886,15 @@ compare_location = True
 # Selecting a live listing in the API results updates these dashboard values
 # on the next Streamlit rerun.
 _selected_live = st.session_state.get("selected_live_property", {})
+_selected_is_international = (
+    isinstance(_selected_live, dict) and bool(_selected_live.get("_is_international"))
+)
+_selected_listing_display = dict(_selected_live) if isinstance(_selected_live, dict) else {}
+# Keep foreign-currency listings out of the INR-trained model inputs.
+# Their listing details remain available for the dashboard selection notice.
+if _selected_is_international:
+    _selected_live = {}
+
 if isinstance(_selected_live, dict) and _selected_live:
     _live_city = _selected_live.get("city") or _selected_live.get("locality") or _selected_live.get("location")
     if _live_city:
@@ -786,7 +914,7 @@ if isinstance(_selected_live, dict) and _selected_live:
             age = max(0, int(float(_live_age)))
     except (TypeError, ValueError):
         pass
-    _live_price = _selected_live.get("priceLakh") or _selected_live.get("price_lakh")
+    _live_price = None if _selected_is_international else (_selected_live.get("priceLakh") or _selected_live.get("price_lakh"))
     if _live_price is None:
         _price_raw = _selected_live.get("priceText") or _selected_live.get("price")
         if isinstance(_price_raw, (int, float)):
@@ -832,7 +960,7 @@ input_data = pd.DataFrame([{
 }])
 
 
-predicted_lakh = max(0, float(model.predict(input_data)[0]))
+predicted_lakh = 0.0 if _selected_is_international else max(0, float(model.predict(input_data)[0]))
 difference = price_lakh - predicted_lakh
 difference_percent = (
     difference / predicted_lakh * 100
@@ -846,7 +974,22 @@ difference_percent = (
 # Dashboard heading
 st.markdown("## Property Dashboard")
 
-st.caption("Choose ‘Use this listing for AI dashboard’ on any live API result to apply that property’s available details to the dashboard. Until then, dashboard estimates use a sample property from the model dataset.")
+if _selected_is_international:
+    st.warning(
+        "An international listing is selected. Its original currency is preserved, "
+        "but the current valuation, affordability and locality models are trained on "
+        "Indian sample data in INR. They are intentionally not applied to this foreign listing; the existing dashboard below remains based on its Indian sample dataset."
+    )
+    st.info(
+        "Selected international listing: "
+        + str(_selected_listing_display.get("title") or "Property listing")
+        + " · "
+        + str(_selected_listing_display.get("_display_price") or "Price not supplied")
+        + " · "
+        + str(_selected_listing_display.get("_display_location") or _selected_listing_display.get("city") or "")
+    )
+else:
+    st.caption("Choose ‘Use this listing for AI dashboard’ on any live API result to apply that property’s available details to the dashboard. Until then, dashboard estimates use a sample property from the model dataset.")
 
 st.caption(
     "Your intelligent real estate dashboard powered by "
@@ -854,179 +997,312 @@ st.caption(
 )
 
 # ==========================================
-# SQUARE YARDS LIVE PROPERTY SEARCH (INDIA)
+# UNIFIED LIVE PROPERTY SEARCH — INDIA + GLOBAL
 # ==========================================
 st.divider()
 st.markdown('<div id="live-properties"></div>', unsafe_allow_html=True)
-st.markdown("## 🌐 Explore Properties Across India")
+st.markdown("## 🌐 Explore Properties — India & Worldwide")
 st.caption(
-    "Search Square Yards' property database for sale listings, rentals, "
-    "and new projects in Indian cities. No API key is required."
+    "Search Indian listings through Square Yards and international listings "
+    "through Untera. Enter a city, locality, state or region in the location field."
 )
 
+country_options = [
+    "India", "United Arab Emirates", "United States", "United Kingdom",
+    "Canada", "Australia", "Singapore", "Portugal", "Spain", "Italy",
+    "France", "Germany", "Netherlands", "Greece", "Turkey", "Thailand",
+    "Japan", "Indonesia", "Malaysia", "Mexico", "Brazil", "South Africa",
+    "New Zealand", "Ireland", "Switzerland", "Austria", "Belgium", "Cyprus",
+    "Croatia", "Poland", "Czechia", "Sweden", "Norway", "Denmark", "Finland",
+    "Romania", "Bulgaria", "Hungary", "Philippines", "Vietnam", "Sri Lanka",
+    "Saudi Arabia", "Qatar", "Oman", "Bahrain", "Other (ISO-2 country code)"
+]
+
 with st.container(border=True):
-    live_col1, live_col2, live_col3 = st.columns([1.25, 1, 1])
-    with live_col1:
-        live_city = st.text_input(
-            "City or locality in India",
-            value=location,
-            placeholder="e.g. Pune, Bengaluru, Thane, Jaipur"
-        ).strip()
-    with live_col2:
-        live_search_type = st.selectbox(
-            "What are you looking for?",
-            ["Properties for sale", "Properties for rent", "New projects"]
+    search_col1, search_col2, search_col3 = st.columns([1.1, 1.3, 1])
+    with search_col1:
+        live_country = st.selectbox(
+            "Country / market",
+            country_options,
+            index=0,
+            key="global_search_country",
+            help="India uses Square Yards. Other countries use the Untera international listings API."
         )
-    with live_col3:
-        live_bhk = st.selectbox(
-            "Configuration",
-            ["Any", "1 BHK", "2 BHK", "3 BHK", "4 BHK", "5 BHK"]
+    with search_col2:
+        live_city = st.text_input(
+            "City, locality, state or region",
+            value="",
+            placeholder="e.g. Mumbai, Dubai, New York, London",
+            key="global_search_location"
+        ).strip()
+    with search_col3:
+        live_search_type = st.selectbox(
+            "Listing purpose",
+            ["For sale", "For rent"],
+            key="global_search_transaction"
         )
 
-    budget_col1, budget_col2, budget_col3 = st.columns(3)
-    with budget_col1:
-        live_min_budget_lakh = st.number_input(
-            "Minimum budget (₹ lakh)", min_value=0, max_value=100000,
-            value=0, step=5
+    filter_col1, filter_col2, filter_col3, filter_col4 = st.columns(4)
+    is_india_search = live_country == "India"
+    currency_label = "₹ lakh" if is_india_search else "USD"
+    default_max_budget = 200 if is_india_search else 500000
+
+    with filter_col1:
+        live_min_budget = st.number_input(
+            f"Minimum budget ({currency_label})",
+            min_value=0,
+            value=0,
+            step=5 if is_india_search else 10000,
+            key="global_search_min_budget"
         )
-    with budget_col2:
-        live_max_budget_lakh = st.number_input(
-            "Maximum budget (₹ lakh)", min_value=0, max_value=100000,
-            value=200, step=5
+    with filter_col2:
+        live_max_budget = st.number_input(
+            f"Maximum budget ({currency_label})",
+            min_value=0,
+            value=default_max_budget,
+            step=5 if is_india_search else 25000,
+            key="global_search_max_budget"
         )
-    with budget_col3:
-        live_result_count = st.selectbox("Results", [5, 10, 20, 30], index=1)
+    with filter_col3:
+        live_bhk = st.selectbox(
+            "Bedrooms",
+            ["Any", "1", "2", "3", "4", "5"],
+            key="global_search_bedrooms"
+        )
+    with filter_col4:
+        live_result_count = st.selectbox(
+            "Results to show", [5, 10, 20, 30, 50], index=1,
+            key="global_search_result_count"
+        )
+
+    other_country_code = ""
+    if live_country == "Other (ISO-2 country code)":
+        other_country_code = st.text_input(
+            "Country ISO-2 code",
+            placeholder="e.g. AE, PT, JP",
+            max_chars=2,
+            key="global_search_other_country"
+        ).strip().upper()
+        st.caption("Use the two-letter country code, for example AE = UAE, PT = Portugal, JP = Japan.")
 
     run_live_search = st.button(
-        "🔎 Search Square Yards", type="primary", use_container_width=True
+        "🔎 Search Properties",
+        type="primary",
+        use_container_width=True,
+        key="run_unified_property_search"
     )
 
     if run_live_search:
         if not live_city:
-            st.warning("Enter an Indian city or locality to search.")
-        elif live_max_budget_lakh and live_min_budget_lakh > live_max_budget_lakh:
+            st.warning("Enter a city, locality, state or region before searching.")
+        elif live_max_budget and live_min_budget > live_max_budget:
             st.warning("Minimum budget cannot be greater than maximum budget.")
+        elif live_country == "Other (ISO-2 country code)" and not re.fullmatch(r"[A-Z]{2}", other_country_code):
+            st.warning("Enter a valid two-letter ISO country code, such as AE or PT.")
         else:
-            # Normalize common spelling variants (e.g. "benguluru") and convert lakh to INR.
-            live_city = normalize_squareyards_location(live_city)
-            min_price = int(live_min_budget_lakh * 100000) if live_min_budget_lakh else None
-            max_price = int(live_max_budget_lakh * 100000) if live_max_budget_lakh else None
-            bhk_value = live_bhk if live_bhk != "Any" else None
-
-            if live_search_type == "New projects":
-                tool_name = "search_projects"
-                args = {"location": live_city, "page": 1, "paging": int(live_result_count)}
-                if bhk_value:
-                    args["bhk"] = bhk_value.replace(" BHK", "")
-                if min_price is not None:
-                    args["minPrice"] = min_price
-                if max_price is not None:
-                    args["maxPrice"] = max_price
-                preferred_keys = ["projects"]
-            else:
-                tool_name = "search_properties"
-                args = {
-                    "listingType": "Sale" if live_search_type == "Properties for sale" else "Rent",
-                    "location": live_city,
-                    "page": 1,
-                    "size": int(live_result_count),
-                }
-                if bhk_value:
-                    args["bedrooms"] = bhk_value
-                if min_price is not None:
-                    args["minPrice" if tool_name == "search_properties" else "minPrice"] = min_price
-                if max_price is not None:
-                    args["maxPrice"] = max_price
-                preferred_keys = ["listings"]
-
-            # A budget of zero is treated as an omitted lower bound.
-            args = {key: value for key, value in args.items() if value is not None}
             try:
-                with st.spinner("Searching Square Yards property data..."):
-                    live_payload = squareyards_search(tool_name, json.dumps(args, sort_keys=True))
-                live_rows = _extract_squareyards_rows(live_payload, preferred_keys)
+                if is_india_search:
+                    # Preserve the existing Square Yards India search flow.
+                    normalized_city = normalize_squareyards_location(live_city)
+                    min_price = int(live_min_budget * 100000) if live_min_budget else None
+                    max_price = int(live_max_budget * 100000) if live_max_budget else None
+                    bhk_value = live_bhk if live_bhk != "Any" else None
+                    tool_name = "search_properties"
+                    args = {
+                        "listingType": "Sale" if live_search_type == "For sale" else "Rent",
+                        "location": normalized_city,
+                        "page": 1,
+                        "size": int(live_result_count),
+                    }
+                    if bhk_value:
+                        args["bedrooms"] = f"{bhk_value} BHK"
+                    if min_price is not None:
+                        args["minPrice"] = min_price
+                    if max_price is not None:
+                        args["maxPrice"] = max_price
+                    args = {key: value for key, value in args.items() if value is not None}
+
+                    with st.spinner(f"Searching Square Yards for properties in {normalized_city}..."):
+                        live_payload = squareyards_search(tool_name, json.dumps(args, sort_keys=True))
+                    live_rows = _extract_squareyards_rows(live_payload, ["listings", "results"])
+                    provider_name = "Square Yards"
+                    display_location = normalized_city
+                    currency_code = "INR"
+                else:
+                    country_code = (
+                        other_country_code
+                        if live_country == "Other (ISO-2 country code)"
+                        else _country_code_from_label(live_country)
+                    )
+                    if not country_code:
+                        st.error("This country is not mapped yet. Choose Other and enter its ISO-2 code.")
+                        st.stop()
+
+                    min_price = int(live_min_budget) if live_min_budget else None
+                    max_price = int(live_max_budget) if live_max_budget else None
+                    beds = int(live_bhk) if live_bhk != "Any" else None
+
+                    with st.spinner(f"Searching Untera listings in {live_country}..."):
+                        live_payload = untera_search(
+                            country_code,
+                            live_city,
+                            "sale" if live_search_type == "For sale" else "rent",
+                            min_price,
+                            max_price,
+                            beds,
+                            int(live_result_count),
+                        )
+                    live_rows = live_payload.get("results", [])
+                    if not isinstance(live_rows, list):
+                        live_rows = []
+                    provider_name = "Untera"
+                    display_location = live_city
+                    currency_code = "USD"
 
                 if live_rows:
-                    total_count = live_payload.get("total", len(live_rows)) if isinstance(live_payload, dict) else len(live_rows)
-                    st.success(f"Found {total_count} result(s) for {live_city}. Showing up to {len(live_rows)}.")
+                    st.success(
+                        f"Found {len(live_rows)} {live_search_type.lower()} result(s) "
+                        f"for {display_location}. Showing up to {len(live_rows)}."
+                    )
                     for row_start in range(0, len(live_rows), 2):
                         card_cols = st.columns(2)
                         for card_col, item in zip(card_cols, live_rows[row_start:row_start + 2]):
+                            if not isinstance(item, dict):
+                                continue
                             with card_col:
-                                title = item.get("title") or item.get("name") or "Property listing"
-                                place = ", ".join(str(x) for x in [item.get("locality"), item.get("city")] if x)
-                                price = item.get("priceText") or item.get("price")
-                                if isinstance(price, (int, float)):
-                                    price = f"₹{price:,.0f}"
-                                area_value = item.get("areaSqft") or item.get("areaText")
-                                details = []
-                                if item.get("bhk"):
-                                    details.append(f"{item.get('bhk')} BHK")
-                                if area_value:
-                                    details.append(f"{area_value} sq.ft." if isinstance(area_value, (int, float)) else str(area_value))
-                                if item.get("pricePerSqft") is not None:
-                                    try:
-                                        details.append(f"₹{float(item.get('pricePerSqft')):,.0f}/sq.ft.")
-                                    except (TypeError, ValueError):
-                                        details.append(f"{item.get('pricePerSqft')}/sq.ft.")
-                                photo_url = _find_listing_image(item)
-                                # Search cards may omit photos; request the full listing detail as a second step.
-                                listing_id = item.get("id") or item.get("propertyId") or item.get("propertyid")
-                                if not photo_url and listing_id:
-                                    try:
-                                        detail_payload = squareyards_listing_details(listing_id)
-                                        photo_url = _find_listing_image(detail_payload)
-                                    except Exception:
-                                        photo_url = None
-                                if photo_url:
-                                    st.image(photo_url, use_container_width=True)
+                                if is_india_search:
+                                    title = _first_value(item, "title", "name") or "Property listing"
+                                    place = ", ".join(str(x) for x in [
+                                        item.get("locality"), item.get("city")
+                                    ] if x)
+                                    price_value = _first_value(item, "priceText", "price")
+                                    if isinstance(price_value, (int, float)):
+                                        price_display = f"₹{price_value:,.0f}"
+                                    else:
+                                        price_display = str(price_value) if price_value is not None else "Price not supplied"
+                                    area_value = _first_value(item, "areaSqft", "areaText", "area")
+                                    bedrooms_value = _first_value(item, "bhk", "bedrooms")
+                                    image_url = _find_listing_image(item)
+                                    listing_id = _first_value(item, "id", "propertyId", "propertyid")
+                                    if not image_url and listing_id:
+                                        try:
+                                            detail_payload = squareyards_listing_details(listing_id)
+                                            image_url = _find_listing_image(detail_payload)
+                                        except Exception:
+                                            image_url = None
+                                    listing_url = _first_value(item, "url", "link", "propertyUrl", "detailUrl")
+                                    map_location = _first_value(item, "address", "locality", "location") or place or display_location
+                                    map_country = "India"
+                                else:
+                                    title = _first_value(item, "title", "name") or "International property listing"
+                                    place = ", ".join(str(x) for x in [
+                                        item.get("address"), item.get("city"), item.get("countryName") or item.get("country")
+                                    ] if x)
+                                    usd_price = _first_value(item, "price_usd", "priceUsd")
+                                    original_price = _first_value(item, "original_price", "originalPrice")
+                                    original_currency = _first_value(item, "original_currency", "originalCurrency")
+                                    if original_price is not None and original_currency:
+                                        price_display = f"{original_currency} {original_price:,.0f}" if isinstance(original_price, (int, float)) else f"{original_currency} {original_price}"
+                                    elif usd_price is not None:
+                                        price_display = f"US$ {float(usd_price):,.0f}"
+                                    else:
+                                        price_display = "Price not supplied"
+                                    area_value = _first_value(item, "area_sqm", "areaSqm", "size_sqm", "area")
+                                    bedrooms_value = _first_value(item, "bedrooms", "beds")
+                                    image_url = _untera_image(item)
+                                    listing_id = _first_value(item, "id", "listing_id")
+                                    listing_url = _first_value(item, "url", "listing_url", "source_url", "sourceUrl", "listingUrl")
+                                    map_location = _first_value(item, "address", "location", "city") or display_location
+                                    map_country = live_country
+                                    if area_value is not None:
+                                        try:
+                                            area_value = f"{float(area_value):,.0f} m²"
+                                        except (TypeError, ValueError):
+                                            area_value = str(area_value)
+
+                                if image_url:
+                                    st.image(image_url, use_container_width=True)
                                 else:
                                     st.markdown(
                                         "<div style='height:180px;border-radius:14px;background:rgba(255,255,255,.48);"
                                         "border:1px solid rgba(255,255,255,.8);display:flex;align-items:center;"
                                         "justify-content:center;color:#687991;font-weight:600;'>"
-                                        "Genuine listing photo not supplied by source</div>",
+                                        "Listing photo not supplied by source</div>",
                                         unsafe_allow_html=True
                                     )
+
                                 st.markdown(f"**{title}**")
                                 if place:
                                     st.caption(f"📍 {place}")
-                                if price is not None:
-                                    st.markdown(f"### {price}")
-                                if details:
-                                    st.write(" · ".join(details))
-                                if item.get("isVerified") is True:
+                                st.markdown(f"### {price_display}")
+
+                                detail_parts = []
+                                if bedrooms_value:
+                                    detail_parts.append(f"{bedrooms_value} bedrooms")
+                                if area_value:
+                                    detail_parts.append(str(area_value))
+                                prop_type = _first_value(item, "type", "property_type", "propertyType")
+                                if prop_type:
+                                    detail_parts.append(str(prop_type))
+                                if detail_parts:
+                                    st.write(" · ".join(detail_parts))
+
+                                if is_india_search and item.get("isVerified") is True:
                                     st.caption("✓ Square Yards verified listing")
-                                # Open Google Maps for the actual live listing location.
-                                map_location = item.get("address") or item.get("locality") or item.get("location") or place or live_city
-                                map_query = urllib.parse.quote(f"{title}, {map_location}, India")
+
+                                map_query = urllib.parse.quote(f"{title}, {map_location}, {map_country}")
                                 st.link_button(
                                     "🗺️ View this property on Google Maps",
                                     f"https://www.google.com/maps/search/?api=1&query={map_query}",
                                     use_container_width=True
                                 )
-                                listing_url = item.get("url") or item.get("link") or item.get("propertyUrl") or item.get("detailUrl")
-                                if listing_url and str(listing_url).startswith("https://"):
-                                    st.link_button("View listing", listing_url, use_container_width=True)
+                                if listing_url and str(listing_url).startswith(("https://", "http://")):
+                                    st.link_button("View original listing", str(listing_url), use_container_width=True)
+
                                 if st.button(
                                     "Use this listing for AI dashboard",
-                                    key=f"use_live_listing_{listing_id or row_start}_{title[:35]}",
+                                    key=f"use_global_listing_{provider_name}_{listing_id or row_start}_{str(title)[:30]}",
                                     use_container_width=True
                                 ):
                                     selected_live = dict(item)
-                                    selected_live.setdefault("city", item.get("city") or live_city)
-                                    selected_live.setdefault("listingType", "Rent" if live_search_type == "Properties for rent" else "Sale")
+                                    selected_live["_provider"] = provider_name
+                                    selected_live["_country_code"] = currency_code
+                                    selected_live["_country_name"] = live_country
+                                    selected_live["_is_international"] = not is_india_search
+                                    selected_live.setdefault("city", item.get("city") or display_location)
+                                    selected_live.setdefault(
+                                        "listingType",
+                                        "Rent" if live_search_type == "For rent" else "Sale"
+                                    )
+                                    if not is_india_search:
+                                        selected_live["_display_price"] = price_display
+                                        selected_live["_display_location"] = display_location
                                     st.session_state["selected_live_property"] = selected_live
                                     st.rerun()
                                 st.divider()
                 else:
-                    message = live_payload.get("message") or live_payload.get("note") if isinstance(live_payload, dict) else None
-                    st.info(message or "No matching results were returned. Try a broader city/locality or remove the budget limit.")
+                    api_message = (
+                        live_payload.get("message") or live_payload.get("note")
+                        if isinstance(live_payload, dict) else None
+                    )
+                    st.info(api_message or "No listings matched. Try a nearby city, a broader location or a wider budget.")
             except ImportError:
-                st.error("Square Yards connection package is missing. Install the updated requirements.txt and redeploy the app.")
+                st.error(
+                    "The Square Yards MCP package is missing. Install the project's "
+                    "requirements.txt dependencies and redeploy."
+                )
             except Exception as error:
-                st.error(f"Square Yards search could not be completed: {error}")
-                st.caption("Please check the search details and retry in a moment.")
+                st.error(f"Property search could not be completed: {error}")
+                st.caption("Check the country, location and API key settings, then try again.")
+
+    if not is_india_search:
+        st.markdown(
+            '<div style="font-size:12px;color:#60748d;margin-top:8px;">'
+            'Powered by '
+            '<a href="https://untera.io" target="_blank">Untera</a>'
+            '</div>',
+            unsafe_allow_html=True
+        )
 
 st.caption(
     "Data note: Square Yards listings are informational and may not reflect "
@@ -1045,22 +1321,22 @@ m1, m2, m3, m4 = st.columns(4)
 
 m1.metric(
     "🏠 Asking Price",
-    f"₹{price_lakh:,.1f} L"
+    _selected_listing_display.get("_display_price", "N/A") if _selected_is_international else f"₹{price_lakh:,.1f} L"
 )
 
 m2.metric(
     "🤖 AI Estimated Value",
-    f"₹{predicted_lakh:,.1f} L"
+    "Not available for international listings" if _selected_is_international else f"₹{predicted_lakh:,.1f} L"
 )
 
 m3.metric(
     "📐 Price / Sq. Ft.",
-    f"₹{price_per_sqft:,.0f}"
+    "N/A" if _selected_is_international else f"₹{price_per_sqft:,.0f}"
 )
 
 m4.metric(
     "💰 Rental Yield",
-    f"{gross_yield:.2f}%"
+    "N/A" if _selected_is_international else f"{gross_yield:.2f}%"
 )
 
 st.divider()
@@ -1082,16 +1358,21 @@ with ai_col1:
 
     st.markdown("#### 📈 AI Price Analysis")
 
-    st.metric(
-        "AI Estimated Property Value",
-        f"₹{predicted_lakh:,.2f} L"
-    )
+    if _selected_is_international:
+        st.info("AI valuation is unavailable for this international listing because the current model is trained on Indian INR-denominated sample data.")
+    else:
+        st.metric(
+            "AI Estimated Property Value",
+            f"₹{predicted_lakh:,.2f} L"
+        )
 
-    st.write(
-        f"Your asking price is ₹{price_lakh:,.2f} lakh."
-    )
+        st.write(
+            f"Your asking price is ₹{price_lakh:,.2f} lakh."
+        )
 
-    if difference > 0:
+    if _selected_is_international:
+        pass
+    elif difference > 0:
 
         st.warning(
             f"Your asking price is "
@@ -1118,25 +1399,28 @@ with ai_col2:
 
     st.markdown("#### 💡 Investment Snapshot")
 
-    st.metric(
-        "Annual Rental Income",
-        f"₹{annual_rent:,.0f}"
-    )
+    if _selected_is_international:
+        st.info("Rental yield and INR price-per-square-foot metrics are not calculated for this foreign-currency listing.")
+    else:
+        st.metric(
+            "Annual Rental Income",
+            f"₹{annual_rent:,.0f}"
+        )
 
-    st.metric(
-        "Monthly Rental Income",
-        f"₹{monthly_rent:,.0f}"
-    )
+        st.metric(
+            "Monthly Rental Income",
+            f"₹{monthly_rent:,.0f}"
+        )
 
-    st.metric(
-        "Gross Rental Yield",
-        f"{gross_yield:.2f}%"
-    )
+        st.metric(
+            "Gross Rental Yield",
+            f"{gross_yield:.2f}%"
+        )
 
-    st.metric(
-        "Price per Sq. Ft.",
-        f"₹{price_per_sqft:,.0f}"
-    )
+        st.metric(
+            "Price per Sq. Ft.",
+            f"₹{price_per_sqft:,.0f}"
+        )
 
 st.divider()
 
@@ -1382,6 +1666,8 @@ st.write(
 )
 
 import urllib.parse
+import urllib.request
+import urllib.error
 
 maps_query = urllib.parse.quote(
     f"{location}, India"
@@ -1406,6 +1692,9 @@ st.caption(
 st.divider()
 st.markdown('<div id="affordability"></div>', unsafe_allow_html=True)
 st.header("🏡 Home Affordability & Loan Calculator")
+
+if _selected_is_international:
+    st.warning("This calculator currently uses INR and Indian home-loan assumptions. It is not applied to the selected international listing; enter an Indian property selection before relying on these figures.")
 
 st.write(
     "Plan your home purchase by understanding your income, "
