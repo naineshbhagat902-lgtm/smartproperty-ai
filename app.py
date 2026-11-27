@@ -1384,64 +1384,32 @@ with st.container(border=True):
             st.warning("Minimum budget cannot be greater than maximum budget.")
         else:
             try:
-                if is_india_search:
-                    # Preserve the existing Square Yards India search flow.
-                    normalized_city = normalize_squareyards_location(live_city)
-                    min_price = int(live_min_budget * 100000) if live_min_budget else None
-                    max_price = int(live_max_budget * 100000) if live_max_budget else None
-                    bhk_value = live_bhk if live_bhk != "Any" else None
-                    tool_name = "search_properties"
-                    args = {
-                        "listingType": "Sale" if live_search_type == "For sale" else "Rent",
-                        "location": normalized_city,
-                        "page": 1,
-                        "size": int(live_result_count),
-                    }
-                    if bhk_value:
-                        args["bedrooms"] = f"{bhk_value} BHK"
-                    if min_price is not None:
-                        args["minPrice"] = min_price
-                    if max_price is not None:
-                        args["maxPrice"] = max_price
-                    args = {key: value for key, value in args.items() if value is not None}
+                # India-only provider: Square Yards.
+                normalized_city = normalize_squareyards_location(live_city)
+                min_price = int(live_min_budget * 100000) if live_min_budget else None
+                max_price = int(live_max_budget * 100000) if live_max_budget else None
+                bhk_value = live_bhk if live_bhk != "Any" else None
+                tool_name = "search_properties"
+                args = {
+                    "listingType": "Sale" if live_search_type == "For sale" else "Rent",
+                    "location": normalized_city,
+                    "page": 1,
+                    "size": int(live_result_count),
+                }
+                if bhk_value:
+                    args["bedrooms"] = f"{bhk_value} BHK"
+                if min_price is not None:
+                    args["minPrice"] = min_price
+                if max_price is not None:
+                    args["maxPrice"] = max_price
+                args = {key: value for key, value in args.items() if value is not None}
 
-                    with st.spinner(f"Searching Square Yards for properties in {normalized_city}..."):
-                        live_payload = squareyards_search(tool_name, json.dumps(args, sort_keys=True))
-                    live_rows = _extract_squareyards_rows(live_payload, ["listings", "results"])
-                    provider_name = "Square Yards"
-                    display_location = normalized_city
-                    currency_code = "INR"
-                else:
-                    country_code = (
-                        other_country_code
-                        if live_country == "Other (ISO-2 country code)"
-                        else _country_code_from_label(live_country)
-                    )
-                    if not country_code:
-                        st.error("This country is not mapped yet. Choose Other and enter its ISO-2 code.")
-                        st.stop()
-
-                    min_price = int(live_min_budget) if live_min_budget else None
-                    max_price = int(live_max_budget) if live_max_budget else None
-                    beds = int(live_bhk) if live_bhk != "Any" else None
-
-                    with st.spinner(f"Searching Untera listings in {live_country}..."):
-                        live_payload = untera_search(
-                            country_code,
-                            live_city,
-                            "sale" if live_search_type == "For sale" else "rent",
-                            min_price,
-                            max_price,
-                            beds,
-                            int(live_result_count),
-                        )
-                    live_rows = live_payload.get("results", [])
-                    if not isinstance(live_rows, list):
-                        live_rows = []
-                    provider_name = "Untera"
-                    display_location = live_city
-                    currency_code = "USD"
-
+                with st.spinner(f"Searching Square Yards for properties in {normalized_city}..."):
+                    live_payload = squareyards_search(tool_name, json.dumps(args, sort_keys=True))
+                live_rows = _extract_squareyards_rows(live_payload, ["listings", "results"])
+                provider_name = "Square Yards"
+                display_location = normalized_city
+                currency_code = "INR"
                 if live_rows:
                     # Remove duplicate listing records before rendering cards.
                     unique_rows = []
