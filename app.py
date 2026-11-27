@@ -1,4 +1,5 @@
 import streamlit as st
+import asyncio
 import pandas as pd
 import matplotlib.pyplot as plt
 import plotly.express as px
@@ -500,6 +501,32 @@ def _parse_voice_property_search(transcript):
             parsed["city"] = " ".join(word.capitalize() for word in city.split())
 
     return parsed
+
+
+
+
+@st.cache_data(ttl=86400, max_entries=40, show_spinner=False)
+def _make_natural_voice_audio(text, voice_name):
+    """Generate one continuous neural-voice MP3 for the complete spoken response."""
+    import edge_tts
+
+    async def _render():
+        communicate = edge_tts.Communicate(
+            text=str(text),
+            voice=str(voice_name),
+            rate="-5%",
+            volume="+0%",
+            pitch="+0Hz",
+        )
+        audio_parts = []
+        async for chunk in communicate.stream():
+            if chunk.get("type") == "audio":
+                audio_parts.append(chunk["data"])
+        if not audio_parts:
+            raise RuntimeError("The neural voice service returned no audio.")
+        return b"".join(audio_parts)
+
+    return asyncio.run(_render())
 
 
 def _build_voice_assistant_answer(question):
@@ -3346,20 +3373,61 @@ _voice_assistant_event = _smartproperty_voice(
 
 if isinstance(_voice_assistant_event, dict):
     _voice_event_id = str(_voice_assistant_event.get("event_id") or "")
-    if (
-        _voice_event_id
-        and _voice_event_id != st.session_state.get("_voice_assistant_event_id")
-        and _voice_assistant_event.get("type") == "assistant_question"
-    ):
+    if _voice_event_id and _voice_event_id != st.session_state.get("_voice_assistant_event_id"):
         st.session_state["_voice_assistant_event_id"] = _voice_event_id
+        _event_type = _voice_assistant_event.get("type")
         _voice_question = str(_voice_assistant_event.get("question") or "").strip()
-        if _voice_question:
+        _voice_language = str(_voice_assistant_event.get("language") or "en-IN")
+        _voice_gender = str(_voice_assistant_event.get("gender") or "female")
+        _voice_targets = {
+            "en-IN": {"female": "en-IN-NeerjaNeural", "male": "en-IN-PrabhatNeural"},
+            "hi-IN": {"female": "hi-IN-SwaraNeural", "male": "hi-IN-MadhurNeural"},
+            "mr-IN": {"female": "mr-IN-AarohiNeural", "male": "mr-IN-ManoharNeural"},
+        }
+        _voice_name = _voice_targets.get(_voice_language, _voice_targets["en-IN"]).get(
+            _voice_gender, "en-IN-NeerjaNeural"
+        )
+
+        if _event_type == "assistant_question" and _voice_question:
             st.session_state["voice_assistant_question"] = _voice_question
             st.session_state["voice_assistant_answer"] = _build_voice_assistant_answer(_voice_question)
             st.rerun()
 
+        _speech_text = ""
+        if _event_type == "speak_dashboard":
+            _speech_text = _voice_current_summary
+        elif _event_type == "speak_listings":
+            _speech_text = _voice_recent_summary
+        elif _event_type == "speak_answer":
+            _speech_text = str(st.session_state.get("voice_assistant_answer", "")).strip()
+
+        if _speech_text:
+            try:
+                with st.spinner("Preparing your natural AI voice…"):
+                    _audio_bytes = _make_natural_voice_audio(_speech_text, _voice_name)
+                st.session_state["voice_natural_audio"] = _audio_bytes
+                st.session_state["voice_natural_audio_label"] = {
+                    "speak_dashboard": "Dashboard voice-over",
+                    "speak_listings": "Property results voice-over",
+                    "speak_answer": "Assistant response",
+                }.get(_event_type, "SmartProperty AI voice-over")
+            except Exception as _voice_error:
+                st.error(
+                    "Natural voice generation is temporarily unavailable. "
+                    "Please try again in a moment. Details: " + str(_voice_error)[:220]
+                )
+
+if st.session_state.get("voice_natural_audio"):
+    st.markdown("#### 🔊 Natural AI voice playback")
+    st.caption(st.session_state.get("voice_natural_audio_label", "SmartProperty AI voice-over"))
+    st.audio(st.session_state["voice_natural_audio"], format="audio/mp3")
+    if st.button("Clear generated audio", key="clear_natural_voice_audio"):
+        st.session_state.pop("voice_natural_audio", None)
+        st.session_state.pop("voice_natural_audio_label", None)
+        st.rerun()
+
 st.caption(
-    "Privacy note: speech recognition is provided by your browser. The app does not "
-    "save microphone recordings. Browser support varies; Chrome or Edge is recommended "
-    "for voice recognition. Read-aloud uses your browser's built-in speech voices."
+    "Voice search uses your browser microphone. Spoken answers use a natural neural voice. "
+    "The generated audio is created when you press a read-aloud button; playback is provided "
+    "as a single audio track to avoid the pauses and interruptions of browser speech synthesis."
 )
