@@ -557,6 +557,33 @@ def untera_search(country_code, location_text, transaction, min_price, max_price
     return payload
 
 
+@st.cache_data(ttl=3600, show_spinner=False)
+def untera_listing_details(listing_id):
+    """Fetch a listing's detail record as a fallback when search has no photo URL."""
+    api_key = get_untera_api_key()
+    if not api_key or not listing_id:
+        return {}
+
+    safe_id = urllib.parse.quote(str(listing_id), safe="")
+    url = f"{UNTERA_API_BASE}/listings/{safe_id}"
+    request = urllib.request.Request(
+        url,
+        headers={
+            "X-API-Key": api_key,
+            "Accept": "application/json",
+            "User-Agent": "SmartPropertyAI/1.0",
+        },
+        method="GET",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=15) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        return payload if isinstance(payload, (dict, list)) else {}
+    except Exception:
+        # A detail lookup must never break the main property search.
+        return {}
+
+
 def _first_value(record, *keys):
     for key in keys:
         value = record.get(key)
@@ -1263,8 +1290,15 @@ with st.container(border=True):
                                         price_display = "Price not supplied"
                                     area_value = _first_value(item, "area_sqm", "areaSqm", "size_sqm", "area")
                                     bedrooms_value = _first_value(item, "bedrooms", "beds")
+                                    listing_id = _first_value(item, "id", "listing_id", "listingId")
                                     image_url = _untera_image(item)
-                                    listing_id = _first_value(item, "id", "listing_id")
+
+                                    # Search results normally include images. If a result has
+                                    # no photo URL, try the documented full-listing endpoint.
+                                    if not image_url and listing_id:
+                                        detail_payload = untera_listing_details(listing_id)
+                                        image_url = _untera_image(detail_payload)
+
                                     listing_url = _first_value(item, "url", "listing_url", "source_url", "sourceUrl", "listingUrl")
                                     map_location = _first_value(item, "address", "location", "city") or display_location
                                     map_country = live_country
