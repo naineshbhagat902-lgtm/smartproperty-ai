@@ -1377,6 +1377,21 @@ with st.container(border=True):
     currency_label = "₹ lakh" if is_india_search else "USD"
     default_max_budget = 200 if is_india_search else 500000
 
+    # Streamlit keeps widget values in session state across reruns. Reset the
+    # budget when the selected market changes so an old USD/INR value is not
+    # accidentally reused with a different currency/unit.
+    current_budget_market = "India" if is_india_search else live_country
+    previous_budget_market = st.session_state.get("_global_search_budget_market")
+    if previous_budget_market != current_budget_market:
+        st.session_state["global_search_min_budget"] = 0
+        st.session_state["global_search_max_budget"] = default_max_budget
+        st.session_state["_global_search_budget_market"] = current_budget_market
+
+    st.caption(
+        "India budgets are entered in ₹ lakh (for example, 50 = ₹50 lakh; "
+        "100 = ₹1 crore). International budgets are entered in USD."
+    )
+
     with filter_col1:
         live_min_budget = st.number_input(
             f"Minimum budget ({currency_label})",
@@ -1716,7 +1731,18 @@ with st.container(border=True):
                         live_payload.get("message") or live_payload.get("note")
                         if isinstance(live_payload, dict) else None
                     )
-                    st.info(api_message or "No listings matched. Try a nearby city, a broader location or a wider budget.")
+                    # Square Yards may return a location-resolution note even
+                    # when no listings match. Show it as context, not as an error
+                    # or as if it were a property-search result.
+                    if is_india_search and isinstance(api_message, str) and api_message.strip().lower().startswith("resolved "):
+                        st.caption(f"Location recognized by Square Yards: {normalized_city}.")
+                        st.info(
+                            "The city was recognized, but no listings matched the current filters. "
+                            "Try Bedrooms = Any and a wider budget (for example ₹0–₹200 lakh), "
+                            "or search a nearby locality."
+                        )
+                    else:
+                        st.info(api_message or "No listings matched. Try a nearby city, a broader location or a wider budget.")
             except ImportError:
                 st.error(
                     "The Square Yards MCP package is missing. Install the project's "
