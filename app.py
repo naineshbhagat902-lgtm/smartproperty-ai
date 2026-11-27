@@ -683,6 +683,116 @@ def _untera_image(record):
     return urls[0] if urls else None
 
 
+
+# ==========================================
+# FREE PROPERTY PHOTO DISCOVERY (OPENVERSE)
+# ==========================================
+# Listing-provider images always have priority. Openverse is a free,
+# openly-licensed secondary source. Its images are labelled as references,
+# never misrepresented as verified photos of the exact property.
+
+@st.cache_data(ttl=86400, max_entries=300, show_spinner=False)
+def _openverse_image_search(query):
+    """Search Openverse anonymously; no Google Cloud billing or API key needed."""
+    query = re.sub(r"\s+", " ", str(query or "")).strip()[:200]
+    if not query:
+        return []
+
+    params = {
+        "q": query,
+        "page_size": 10,
+        "license": "cc0,by,by-sa",
+        "category": "photograph",
+        "filter_dead": "true",
+    }
+    url = "https://api.openverse.org/v1/images/?" + urllib.parse.urlencode(params)
+    request = urllib.request.Request(
+        url,
+        headers={
+            "Accept": "application/json",
+            "User-Agent": "SmartPropertyAI/1.0 (openly licensed property photo search)",
+        },
+        method="GET",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=12) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        results = payload.get("results", []) if isinstance(payload, dict) else []
+        return [item for item in results if isinstance(item, dict)]
+    except (urllib.error.URLError, TimeoutError, ValueError, OSError, json.JSONDecodeError):
+        return []
+
+
+def _photo_search_tokens(value):
+    """Create meaningful matching terms from property and locality text."""
+    stop_words = {
+        "buy", "sale", "rent", "for", "bed", "beds", "bedroom", "bedrooms",
+        "bhk", "property", "properties", "listing", "residential", "apartment",
+        "flat", "villa", "house", "home", "office", "space", "the", "and",
+        "in", "at", "of", "to", "with", "near", "unit", "sqm", "sqft",
+    }
+    words = re.findall(r"[a-z0-9]+", str(value or "").casefold())
+    return {word for word in words if len(word) >= 3 and word not in stop_words}
+
+
+def _openverse_photo_candidates(title, place, city, country):
+    """
+    Return carefully matched, openly licensed reference images.
+    Match tier 1 uses building/listing + locality terms.
+    Match tier 2 uses locality + architecture terms and is labelled as an area reference.
+    """
+    location_text = " ".join(str(part) for part in (place, city, country) if part)
+    title_tokens = _photo_search_tokens(title)
+    location_tokens = _photo_search_tokens(location_text)
+    if not title_tokens and not location_tokens:
+        return [], None
+
+    exact_query = " ".join(str(part) for part in (title, place, city, country) if part)
+    exact_results = _openverse_image_search(exact_query)
+    matched = []
+    for item in exact_results:
+        searchable = " ".join([
+            str(item.get("title") or ""),
+            " ".join(
+                str(tag.get("name") or "") if isinstance(tag, dict) else str(tag)
+                for tag in (item.get("tags") or [])
+            ),
+        ])
+        result_tokens = _photo_search_tokens(searchable)
+        location_hits = result_tokens.intersection(location_tokens)
+        all_hits = result_tokens.intersection(title_tokens.union(location_tokens))
+        # Require at least two meaningful matches, including one location term.
+        if len(all_hits) >= 2 and location_hits:
+            matched.append(item)
+    if matched:
+        return matched[:5], "building_or_locality_match"
+
+    # A broader locality photograph may be useful, but must be visibly labelled
+    # as an area reference and must match the location plus a building term.
+    locality_query = " ".join(str(part) for part in (
+        place, city, country, "residential building architecture"
+    ) if part)
+    locality_results = _openverse_image_search(locality_query)
+    architecture_terms = {
+        "building", "architecture", "apartment", "residential", "house",
+        "villa", "tower", "condominium", "home", "exterior",
+    }
+    area_matches = []
+    for item in locality_results:
+        searchable = " ".join([
+            str(item.get("title") or ""),
+            " ".join(
+                str(tag.get("name") or "") if isinstance(tag, dict) else str(tag)
+                for tag in (item.get("tags") or [])
+            ),
+        ])
+        result_tokens = _photo_search_tokens(searchable)
+        if result_tokens.intersection(location_tokens) and result_tokens.intersection(architecture_terms):
+            area_matches.append(item)
+    return area_matches[:5], "locality_reference" if area_matches else None
+
+
+
 def _country_code_from_label(country_label):
     """Country label to ISO-3166 alpha-2 code for Untera."""
     country_codes = {
@@ -1351,6 +1461,10 @@ with st.container(border=True):
                                 # Never reuse a photo URL across different listing cards.
                                 image_url = None
                                 photo_bytes = None
+                                openverse_image = None
+                                openverse_match_type = None
+
+                                # 1) Prefer a genuine image URL supplied by the listing provider.
                                 for candidate_url in image_candidates[:5]:
                                     if candidate_url in seen_photo_urls:
                                         continue
@@ -1361,16 +1475,49 @@ with st.container(border=True):
                                         seen_photo_urls.add(candidate_url)
                                         break
 
-                                if photo_bytes:
+                                # 2) If the listing provider has no usable image, search
+                                # openly licensed photos using the actual building/locality.
+                                # These are references, not claims about the exact unit.
+                                if not photo_bytes:
+                                    reference_candidates, openverse_match_type = _openverse_photo_candidates(
+                                        title, place, display_location, map_country
+                                    )
+                                    for candidate in reference_candidates:
+                                        candidate_url = candidate.get("thumbnail") or candidate.get("url")
+                                        if not isinstance(candidate_url, str) or not candidate_url.startswith(("https://", "http://")):
+                                            continue
+                                        if candidate_url in seen_photo_urls:
+                                            continue
+                                        candidate_bytes = _download_listing_photo(candidate_url)
+                                        if candidate_bytes:
+                                            photo_bytes = candidate_bytes
+                                            image_url = candidate_url
+                                            openverse_image = candidate
+                                            seen_photo_urls.add(candidate_url)
+                                            break
+
+                                if photo_bytes and not openverse_image:
                                     st.image(photo_bytes, use_container_width=True)
                                     st.caption(f"Actual listing photo supplied by {provider_name}")
+                                elif photo_bytes and openverse_image:
+                                    st.image(photo_bytes, use_container_width=True)
+                                    if openverse_match_type == "locality_reference":
+                                        st.caption("Locality reference photo — not verified as this exact property.")
+                                    else:
+                                        st.caption("Openly licensed image matched to the building/locality terms — exact listing identity is not verified.")
+                                    creator = str(openverse_image.get("creator") or "Creator not listed")
+                                    license_name = str(openverse_image.get("license") or "Licence not listed").upper()
+                                    source_url = openverse_image.get("foreign_landing_url") or openverse_image.get("detail_url")
+                                    st.caption(f"Photo credit: {creator} · Licence: {license_name}")
+                                    if isinstance(source_url, str) and source_url.startswith(("https://", "http://")):
+                                        st.markdown(f"[View image source and licence]({source_url})")
                                 else:
                                     st.markdown(
                                         "<div style='height:210px;display:flex;align-items:center;justify-content:center;"
                                         "border:1px dashed rgba(90,120,160,.45);border-radius:18px;"
                                         "background:rgba(255,255,255,.30);color:#60748d;text-align:center;padding:18px;'>"
                                         "<div><div style='font-size:34px;'>🏡</div>"
-                                        "<b>Actual listing photo unavailable</b><br><small>The source did not provide a usable photo URL. We won't show a random image.</small></div></div>",
+                                        "<b>Verified photo unavailable</b><br><small>The listing source and free photo index did not return a sufficiently relevant image. We won't display a random or misleading photo.</small></div></div>",
                                         unsafe_allow_html=True
                                     )
 
