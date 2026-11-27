@@ -7,6 +7,7 @@ from pathlib import Path
 import textwrap
 import asyncio
 import json
+import urllib.parse
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.pipeline import Pipeline
@@ -713,16 +714,14 @@ with st.sidebar:
     margin-bottom: 18px;
     box-shadow: 0 8px 30px rgba(50,100,160,0.12);
 ">
-    <div style="color:#377fc1;font-size:12px;
-                font-weight:800;letter-spacing:3px;">
+    <div style="color:#377fc1;font-size:12px;font-weight:800;letter-spacing:3px;">
         SMARTPROPERTY AI
     </div>
-    <div style="color:#172b49;font-size:23px;
-                font-weight:800;margin-top:12px;">
-        Explore Properties
+    <div style="color:#172b49;font-size:23px;font-weight:800;margin-top:12px;">
+        Property Analysis
     </div>
     <div style="color:#63758c;font-size:12px;margin-top:8px;">
-        Choose a property to update its details and AI analysis.
+        Enter property details for AI analysis. Search real listings in the main Explore Properties section.
     </div>
 </div>
         """,
@@ -731,58 +730,38 @@ with st.sidebar:
 
     st.markdown("##### 📍 PROPERTY LOCATION")
     city_options = sorted(properties["city"].dropna().unique().tolist())
-    location = st.selectbox("City", city_options, key="sidebar_city")
+    default_city = "Mumbai" if "Mumbai" in city_options else (city_options[0] if city_options else "Mumbai")
+    location = st.text_input("City / locality", value=default_city, key="analysis_city").strip() or default_city
 
-    city_properties = properties[properties["city"] == location].copy()
-    type_options = sorted(city_properties["property_type"].dropna().unique().tolist())
-    property_type = st.selectbox("Property type", type_options, key="sidebar_property_type")
-
-    matching_properties = city_properties[city_properties["property_type"] == property_type].copy()
-    if matching_properties.empty:
-        matching_properties = city_properties
-
-    property_options = matching_properties["property_name"].astype(str).tolist()
-    selected_property_name = st.selectbox(
-        "Select property", property_options, key="sidebar_selected_property"
-    )
-    selected_rows = matching_properties[
-        matching_properties["property_name"].astype(str) == selected_property_name
-    ]
-    selected_property = selected_rows.iloc[0]
-
-    # Use the chosen CSV property's values as the starting values, not fixed demo defaults.
-    safe_key = "".join(ch for ch in selected_property_name if ch.isalnum())[:35] or "selected"
-    default_price = max(1.0, float(selected_property["price_lakh"]))
-    default_area = max(50, int(selected_property["area_sqft"]))
-    default_age = max(0, int(selected_property["building_age"]))
-    default_rent = max(0, int(selected_property["monthly_rent"]))
+    type_options = sorted(properties["property_type"].dropna().unique().tolist())
+    property_type = st.selectbox("Property type", type_options, key="analysis_property_type")
 
     st.divider()
     st.markdown("##### 🏡 PROPERTY SPECIFICATIONS")
     price_lakh = st.number_input(
         "Asking price (₹ lakh)", min_value=1.0, max_value=10000.0,
-        value=default_price, step=1.0, key=f"sidebar_price_{safe_key}"
+        value=120.0, step=1.0, key="analysis_price_lakh"
     )
     area = st.number_input(
         "Area (sq. ft.)", min_value=50, max_value=100000,
-        value=default_area, step=10, key=f"sidebar_area_{safe_key}"
+        value=1000, step=10, key="analysis_area_sqft"
     )
     age = st.number_input(
         "Building age (years)", min_value=0, max_value=150,
-        value=default_age, step=1, key=f"sidebar_age_{safe_key}"
+        value=5, step=1, key="analysis_building_age"
     )
 
     st.divider()
     st.markdown("##### 💰 RENTAL INFORMATION")
     monthly_rent = st.number_input(
         "Expected monthly rent (₹)", min_value=0, max_value=10000000,
-        value=default_rent, step=1000, key=f"sidebar_rent_{safe_key}"
+        value=30000, step=1000, key="analysis_monthly_rent"
     )
     st.divider()
     compare_location = st.checkbox(
         "Compare with selected location", value=True, key="sidebar_compare_location"
     )
-    st.caption("Your selections automatically update the property analysis.")
+    st.caption("Your entered details update the property analysis.")
 
 # Calculations
 price_rupees = price_lakh * 100000
@@ -962,6 +941,14 @@ with st.container(border=True):
                                     st.write(" · ".join(details))
                                 if item.get("isVerified") is True:
                                     st.caption("✓ Square Yards verified listing")
+                                # Open Google Maps for the actual live listing location.
+                                map_location = item.get("address") or item.get("locality") or item.get("location") or place or live_city
+                                map_query = urllib.parse.quote(f"{title}, {map_location}, India")
+                                st.link_button(
+                                    "🗺️ View this property on Google Maps",
+                                    f"https://www.google.com/maps/search/?api=1&query={map_query}",
+                                    use_container_width=True
+                                )
                                 listing_url = item.get("url") or item.get("link") or item.get("propertyUrl") or item.get("detailUrl")
                                 if listing_url and str(listing_url).startswith("https://"):
                                     st.link_button("View listing", listing_url, use_container_width=True)
@@ -973,12 +960,12 @@ with st.container(border=True):
                 st.error("Square Yards connection package is missing. Install the updated requirements.txt and redeploy the app.")
             except Exception as error:
                 st.error(f"Square Yards search could not be completed: {error}")
-                st.caption("Your existing CSV dashboard is still available. Please retry in a moment.")
+                st.caption("Please check the search details and retry in a moment.")
 
 st.caption(
     "Data note: Square Yards listings are informational and may not reflect "
     "current availability or final transaction prices. Verify details with the listing provider. "
-    "Your CSV-based AI estimate is a separate sample-data model, not a live market valuation. "
+    "The AI estimate uses a sample-data model and is not a live market valuation. "
     "Listing photos appear only when Square Yards supplies a genuine photo URL; missing photos are not fabricated."
 )
 
@@ -1013,124 +1000,8 @@ m4.metric(
 st.divider()
 
 
-st.markdown('<div id="featured-properties"></div>', unsafe_allow_html=True)
-
-st.markdown("## Featured Properties")
-
-st.caption(
-    "Discover selected properties from your property database."
-)
-
-featured_properties = properties[
-    (properties["city"] == location)
-    & (properties["property_type"] == property_type)
-].head(6)
-
-if featured_properties.empty:
-    st.info("No properties available for this location.")
-
-else:
-    property_columns = st.columns(3)
-
-    for index, (_, prop) in enumerate(
-        featured_properties.iterrows()
-    ):
-        with property_columns[index % 3]:
-
-            with st.container(
-    border=True,
-    key=f"property-card-{index}"
-):
-
-                image_path = prop.get("image_path", "")
-
-                if (
-                    pd.notna(image_path)
-                    and (BASE_DIR / str(image_path)).is_file()
-                ):
-                    st.image(
-                        str(BASE_DIR / str(image_path)),
-                        use_container_width=True
-                    )
-                else:
-                    st.markdown(
-                        """
-                        <div style="
-                            height:190px;
-                            background:#E9E6DF;
-                            border-radius:8px;
-                            display:flex;
-                            align-items:center;
-                            justify-content:center;
-                            color:#7C8490;
-                            font-size:15px;
-                        ">
-                            Property Image Unavailable
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-
-                st.markdown(
-                    f"""
-                    <div style="
-                        color:#B08D57;
-                        font-size:11px;
-                        font-weight:700;
-                        letter-spacing:1.5px;
-                        margin-top:12px;
-                        text-transform:uppercase;
-                    ">
-                        {prop['property_type']}
-                    </div>
-                    <div style="
-                        color:#101827;
-                        font-size:20px;
-                        font-weight:750;
-                        margin-top:5px;
-                        line-height:1.4;
-                    ">
-                        {prop['property_name']}
-                    </div>
-                    <div style="
-                        color:#78818D;
-                        font-size:13px;
-                        margin-top:5px;
-                    ">
-                        📍 {prop['location']}
-                    </div>
-                    <div style="
-                        color:#B08D57;
-                        font-size:25px;
-                        font-weight:800;
-                        margin-top:15px;
-                        margin-bottom:12px;
-                    ">
-                        ₹{float(prop['price_lakh']):,.2f} L
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-
-                st.divider()
-
-                detail1, detail2 = st.columns(2)
-
-                with detail1:
-                    st.markdown("**📐 Area**")
-                    st.write(f"{float(prop['area_sqft']):,.0f} sq.ft.")
-
-                with detail2:
-                    st.markdown("**💰 Monthly Rent**")
-                    st.write(f"₹{float(prop['monthly_rent']):,.0f}")                  
-            
-
-st.caption(
-    f"🏗️ Building age: "
-    f"{float(prop['building_age']):.0f} years"
-)
-st.divider()
-
+# CSV-backed featured-property cards removed. The single Explore Properties
+# feature above is the live Square Yards search and is the source for property discovery.
 
 # ==========================================
 # 3. AI PROPERTY ANALYTICS
