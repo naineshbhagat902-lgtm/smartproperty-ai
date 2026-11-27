@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#172b49}
+*{box-sizing:border-box}
+body{margin:0;background:transparent}
+.panel{width:100%;padding:16px 18px;border:1px solid rgba(255,255,255,.86);border-radius:22px;background:linear-gradient(135deg,rgba(255,255,255,.62),rgba(255,255,255,.34));box-shadow:0 10px 30px rgba(50,90,150,.08),inset 0 1px 2px #fff;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px)}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h3{font-size:17px;margin:0;color:#172b49;font-weight:800}
+.sub{font-size:12px;color:#62758e;line-height:1.5;margin:6px 0 12px}
+.controls{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+button,select,input{font:inherit;border-radius:13px;border:1px solid rgba(255,255,255,.95);background:rgba(255,255,255,.68);color:#1c3e67;padding:10px 13px;min-height:40px}
+button{font-weight:700;cursor:pointer;box-shadow:0 4px 13px rgba(50,90,150,.07);transition:transform .18s,background .18s}
+button:hover{transform:translateY(-1px);background:rgba(255,255,255,.96)}
+button.primary{background:linear-gradient(110deg,#e6f3ff,#f0edff);border-color:#fff}
+button.stop{color:#9c3140}
+select{min-width:135px}
+input{flex:1;min-width:160px}
+.status{font-size:12px;color:#54708f;margin-top:10px;min-height:18px}
+.answer{margin-top:12px;padding:12px 14px;border-radius:15px;background:rgba(255,255,255,.54);border:1px solid rgba(255,255,255,.9);font-size:13px;line-height:1.6;color:#243b5a;white-space:pre-wrap}
+.answer:empty{display:none}
+.pill{font-size:10px;font-weight:800;letter-spacing:.5px;color:#28634e;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.18);padding:5px 9px;border-radius:99px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+.grid button{width:100%}
+@media(max-width:520px){.panel{padding:13px}.grid{grid-template-columns:1fr}button,select{width:100%}.controls{width:100%}input{width:100%}}
+</style>
+</head>
+<body>
+<div class="panel" id="root">
+  <div class="top">
+    <h3 id="heading">SmartProperty AI Voice</h3>
+    <span class="pill">FREE · BROWSER VOICE</span>
+  </div>
+  <p class="sub" id="description">Use your voice to search Indian properties.</p>
+  <div class="controls">
+    <select id="language" aria-label="Voice language">
+      <option value="en-IN">English (India)</option>
+      <option value="hi-IN">हिन्दी</option>
+      <option value="mr-IN">मराठी</option>
+    </select>
+    <button class="primary" id="listen">🎙️ Start listening</button>
+  </div>
+  <div id="assistantControls" hidden>
+    <div class="controls" style="margin-top:10px">
+      <input id="question" type="text" placeholder="Ask: What is the estimated property price?">
+      <button class="primary" id="ask">Ask assistant</button>
+    </div>
+    <div class="grid">
+      <button id="readDashboard">🔊 Read dashboard</button>
+      <button id="readListings">🏘️ Read property results</button>
+      <button id="readAnswer">💬 Speak answer</button>
+      <button class="stop" id="stop">■ Stop speaking</button>
+    </div>
+    <div class="answer" id="answer"></div>
+  </div>
+  <div class="status" id="status" role="status" aria-live="polite">Ready.</div>
+</div>
+<script>
+(function(){
+  const root=document.getElementById("root");
+  const heading=document.getElementById("heading");
+  const description=document.getElementById("description");
+  const language=document.getElementById("language");
+  const listen=document.getElementById("listen");
+  const assistantControls=document.getElementById("assistantControls");
+  const question=document.getElementById("question");
+  const ask=document.getElementById("ask");
+  const answer=document.getElementById("answer");
+  const status=document.getElementById("status");
+  const readDashboard=document.getElementById("readDashboard");
+  const readListings=document.getElementById("readListings");
+  const readAnswer=document.getElementById("readAnswer");
+  const stop=document.getElementById("stop");
+  let args={};
+  let recognition=null;
+  let recognitionTarget="search";
+
+  function send(value){
+    window.parent.postMessage({isStreamlitMessage:true,type:"streamlit:setComponentValue",value:value},"*");
+  }
+  function resize(){
+    const h=Math.ceil(root.getBoundingClientRect().height+8);
+    window.parent.postMessage({isStreamlitMessage:true,type:"streamlit:setFrameHeight",height:h},"*");
+  }
+  function speak(text){
+    if(!("speechSynthesis" in window)){status.textContent="Read-aloud is not supported in this browser.";return;}
+    const content=String(text||"").trim();
+    if(!content){status.textContent="There is no text available to read yet.";return;}
+    window.speechSynthesis.cancel();
+    const utterance=new SpeechSynthesisUtterance(content);
+    utterance.lang=language.value||"en-IN";
+    utterance.rate=0.96;
+    utterance.pitch=1;
+    utterance.onstart=()=>{status.textContent="Speaking…";};
+    utterance.onend=()=>{status.textContent="Finished reading.";};
+    utterance.onerror=()=>{status.textContent="Speech playback could not start. Check your browser audio settings.";};
+    window.speechSynthesis.speak(utterance);
+  }
+  function submitQuestion(text){
+    const value=String(text||"").trim();
+    if(!value){status.textContent="Please say or type a question first.";return;}
+    send({type:"assistant_question",question:value,language:language.value,event_id:String(Date.now())+"-"+Math.random().toString(16).slice(2)});
+    status.textContent="Sending your question to SmartProperty AI…";
+  }
+  function startRecognition(target){
+    const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!SpeechRecognition){
+      status.textContent="Voice recognition is not available in this browser. Try Chrome or Edge, or type your question. Read-aloud can still work.";
+      return;
+    }
+    if(recognition){try{recognition.stop();}catch(e){}}
+    recognitionTarget=target;
+    recognition=new SpeechRecognition();
+    recognition.lang=language.value||"en-IN";
+    recognition.interimResults=false;
+    recognition.continuous=false;
+    recognition.maxAlternatives=1;
+    recognition.onstart=()=>{listen.textContent="🎧 Listening…";status.textContent="Speak now. Allow microphone access if asked.";};
+    recognition.onresult=(event)=>{
+      const transcript=event.results&&event.results[0]&&event.results[0][0]?event.results[0][0].transcript:"";
+      if(!transcript){status.textContent="I did not catch that. Please try again.";return;}
+      if(recognitionTarget==="search"){
+        send({type:"voice_search",transcript:transcript,language:language.value,event_id:String(Date.now())+"-"+Math.random().toString(16).slice(2)});
+        status.textContent="Voice search captured. Updating the search filters…";
+      }else{
+        question.value=transcript;
+        submitQuestion(transcript);
+      }
+    };
+    recognition.onerror=(event)=>{
+      const messages={ "not-allowed":"Microphone permission was blocked. Allow microphone access in your browser settings.","no-speech":"No speech was detected. Please try again.","network":"Browser speech recognition needs an internet connection.","audio-capture":"No microphone was detected."};
+      status.textContent=messages[event.error]||("Voice recognition error: "+event.error);
+    };
+    recognition.onend=()=>{listen.textContent=recognitionTarget==="search"?"🎙️ Start listening":"🎙️ Ask by voice";};
+    try{recognition.start();}catch(e){status.textContent="Could not start the microphone. Please try again.";}
+  }
+  function render(nextArgs){
+    args=nextArgs||{};
+    const mode=args.mode||"search";
+    if(mode==="assistant"){
+      heading.textContent="🎙️ SmartProperty AI Voice Assistant";
+      description.textContent="Ask about your current dashboard, speak in English, Hindi or Marathi, or listen to your property insights.";
+      assistantControls.hidden=false;
+      listen.textContent="🎙️ Ask by voice";
+      answer.textContent=args.assistant_answer||"Ask a question to hear an answer based on your current SmartProperty AI dashboard.";
+    }else{
+      heading.textContent="🎤 Voice Property Search";
+      description.textContent="Say: “Find 2 BHK in Pune under 80 lakh” — then review the filled filters and press Search Properties.";
+      assistantControls.hidden=true;
+      listen.textContent="🎙️ Start voice search";
+    }
+    resize();
+  }
+  listen.addEventListener("click",()=>startRecognition((args.mode||"search")==="assistant"?"assistant":"search"));
+  ask.addEventListener("click",()=>submitQuestion(question.value));
+  question.addEventListener("keydown",(event)=>{if(event.key==="Enter"){submitQuestion(question.value);}});
+  readDashboard.addEventListener("click",()=>speak(args.dashboard_summary||"Dashboard summary is not available."));
+  readListings.addEventListener("click",()=>speak(args.property_summary||"No recent property results are available."));
+  readAnswer.addEventListener("click",()=>speak(args.assistant_answer||answer.textContent));
+  stop.addEventListener("click",()=>{if("speechSynthesis" in window){window.speechSynthesis.cancel();status.textContent="Speech stopped.";}});
+  window.addEventListener("message",(event)=>{
+    const data=event.data||{};
+    if(data.type==="streamlit:render"){render(data.args||{});}
+  });
+  window.parent.postMessage({isStreamlitMessage:true,type:"streamlit:componentReady",apiVersion:1},"*");
+  resize();
+})();
+</script>
+</body>
+</html>
