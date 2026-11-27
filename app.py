@@ -566,18 +566,72 @@ def _first_value(record, *keys):
 
 
 def _untera_image(record):
-    images = record.get("images") or record.get("photos") or []
-    if isinstance(images, str):
-        return images if images.startswith(("https://", "http://")) else None
-    if isinstance(images, list):
-        for image in images:
-            if isinstance(image, str) and image.startswith(("https://", "http://")):
-                return image
-            if isinstance(image, dict):
-                candidate = _first_value(image, "url", "src", "image_url")
-                if candidate and str(candidate).startswith(("https://", "http://")):
-                    return candidate
-    return _find_listing_image(record)
+    """
+    Extract a real listing photo URL from Untera's response.
+    Supports common API variations such as images[], photos[], imageUrl,
+    primaryImage, thumbnail, and nested media/gallery objects.
+    """
+    if not isinstance(record, (dict, list)):
+        return None
+
+    image_keys = {
+        "image", "images", "imageurl", "imageurls", "image_url",
+        "photo", "photos", "photourl", "photourls", "photo_url",
+        "picture", "pictures", "pictureurl", "picture_url",
+        "thumbnail", "thumbnailurl", "thumbnail_url",
+        "cover", "coverimage", "cover_image",
+        "primaryimage", "primary_image", "mainimage", "main_image",
+        "propertyimage", "propertyimages", "property_image",
+        "listingimage", "listingimages", "listing_image",
+        "media", "gallery", "galleryimages", "gallery_images",
+    }
+    url_keys = {
+        "url", "src", "href", "secure_url", "original",
+        "original_url", "large", "medium", "full", "image_url",
+        "imageurl", "photo_url", "photourl",
+    }
+
+    def walk(value, image_context=False, depth=0):
+        if depth > 12:
+            return None
+
+        if isinstance(value, str):
+            candidate = value.strip()
+            if image_context and candidate.startswith(("https://", "http://")):
+                return candidate
+            return None
+
+        if isinstance(value, list):
+            for child in value:
+                found = walk(child, image_context, depth + 1)
+                if found:
+                    return found
+            return None
+
+        if isinstance(value, dict):
+            # Prefer direct URL properties inside an image/photo object.
+            for key, child in value.items():
+                normalized = re.sub(r"[^a-z0-9]", "", str(key).casefold())
+                if image_context and normalized in {
+                    re.sub(r"[^a-z0-9]", "", k) for k in url_keys
+                }:
+                    found = walk(child, True, depth + 1)
+                    if found:
+                        return found
+
+            # Then inspect all fields, carrying image context through image-like keys.
+            for key, child in value.items():
+                normalized = re.sub(r"[^a-z0-9]", "", str(key).casefold())
+                is_image_field = normalized in {
+                    re.sub(r"[^a-z0-9]", "", k) for k in image_keys
+                }
+                found = walk(child, image_context or is_image_field, depth + 1)
+                if found:
+                    return found
+
+        return None
+
+    return walk(record)
 
 
 def _country_code_from_label(country_label):
@@ -1227,7 +1281,7 @@ with st.container(border=True):
                                         "<div style='height:180px;border-radius:14px;background:rgba(255,255,255,.48);"
                                         "border:1px solid rgba(255,255,255,.8);display:flex;align-items:center;"
                                         "justify-content:center;color:#687991;font-weight:600;'>"
-                                        "Listing photo not supplied by source</div>",
+                                        "Photo unavailable in this listing's API data</div>",
                                         unsafe_allow_html=True
                                     )
 
