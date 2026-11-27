@@ -593,7 +593,7 @@ def _first_value(record, *keys):
 
 
 def _listing_image_urls(record):
-    """Return distinct real image URLs found in provider image/photo fields only."""
+    """Extract genuine provider photo URLs, including Untera's documented images[] field."""
     image_keys = {
         "image", "images", "imageurl", "imageurls", "image_url", "photo", "photos",
         "photourl", "photourls", "photo_url", "picture", "pictures", "pictureurl",
@@ -603,8 +603,10 @@ def _listing_image_urls(record):
         "listingimage", "listingimages", "listing_image", "media", "gallery",
         "galleryimages", "gallery_images",
     }
-    url_keys = {"url", "src", "href", "secure_url", "original", "original_url",
-                "large", "medium", "full", "image_url", "imageurl", "photo_url", "photourl"}
+    url_keys = {
+        "url", "src", "href", "secure_url", "original", "original_url",
+        "large", "medium", "full", "image_url", "imageurl", "photo_url", "photourl",
+    }
     image_keys = {re.sub(r"[^a-z0-9]", "", k.casefold()) for k in image_keys}
     url_keys = {re.sub(r"[^a-z0-9]", "", k.casefold()) for k in url_keys}
     found, seen = [], set()
@@ -613,35 +615,66 @@ def _listing_image_urls(record):
         if not isinstance(candidate, str):
             return
         candidate = candidate.strip()
+        # Some feeds return protocol-relative CDN URLs.
+        if candidate.startswith("//"):
+            candidate = "https:" + candidate
         if not candidate.startswith(("https://", "http://")):
             return
-        # The provider may use CDN URLs without a file extension; the enclosing
-        # images/photos field is the signal that this URL represents a photo.
         if candidate not in seen:
             seen.add(candidate)
             found.append(candidate)
 
     def walk(value, image_context=False, depth=0):
-        if depth > 14:
+        if depth > 16:
             return
         if isinstance(value, str):
             if image_context:
                 add(value)
-        elif isinstance(value, list):
+        elif isinstance(value, (list, tuple)):
             for child in value:
                 walk(child, image_context, depth + 1)
         elif isinstance(value, dict):
-            # URLs inside photo objects are valid only when nested below a photo field.
             for key, child in value.items():
                 normalized = re.sub(r"[^a-z0-9]", "", str(key).casefold())
-                if image_context and normalized in url_keys:
-                    walk(child, True, depth + 1)
-            for key, child in value.items():
-                normalized = re.sub(r"[^a-z0-9]", "", str(key).casefold())
-                walk(child, image_context or normalized in image_keys, depth + 1)
+                child_is_photo = image_context or normalized in image_keys
+                # Handles Untera images[] strings and objects such as
+                # {"url": "..."} / {"imageUrl": "..."}.
+                if child_is_photo or (image_context and normalized in url_keys):
+                    walk(child, child_is_photo or normalized in url_keys, depth + 1)
 
+    if isinstance(record, dict):
+        # Explicitly prioritize the documented Untera field before generic nesting.
+        for key in ("images", "image", "imageUrl", "image_url", "photos", "photoUrl", "photo_url"):
+            if key in record:
+                walk(record[key], True, 0)
     walk(record)
     return found
+
+
+@st.cache_data(ttl=3600, max_entries=256, show_spinner=False)
+def _download_listing_photo(image_url):
+    """Fetch a provider-hosted photo as bytes so Streamlit does not rely on remote rendering."""
+    if not isinstance(image_url, str) or not image_url.startswith(("https://", "http://")):
+        return None
+    request = urllib.request.Request(
+        image_url,
+        headers={
+            "User-Agent": "Mozilla/5.0 (compatible; SmartPropertyAI/1.0)",
+            "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+        },
+        method="GET",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=12) as response:
+            content_type = response.headers.get_content_type().lower()
+            if not content_type.startswith("image/"):
+                return None
+            image_bytes = response.read(8 * 1024 * 1024 + 1)
+            if len(image_bytes) > 8 * 1024 * 1024 or not image_bytes:
+                return None
+            return image_bytes
+    except (urllib.error.URLError, TimeoutError, ValueError, OSError):
+        return None
 
 
 def _untera_image(record):
@@ -1312,15 +1345,24 @@ with st.container(border=True):
                                         except (TypeError, ValueError):
                                             area_value = str(area_value)
 
-                                # Never reuse one property's photo for another listing.
-                                # If the provider has no unique actual photo, show an honest placeholder.
-                                image_url = next(
-                                    (candidate for candidate in image_candidates if candidate not in seen_photo_urls),
-                                    None
-                                )
-                                if image_url:
-                                    seen_photo_urls.add(image_url)
-                                    st.image(image_url, use_container_width=True)
+                                # Load provider photos as bytes. This is more reliable than
+                                # passing a remote URL directly to st.image (some CDNs block
+                                # Streamlit's image proxy or require a browser-like request).
+                                # Never reuse a photo URL across different listing cards.
+                                image_url = None
+                                photo_bytes = None
+                                for candidate_url in image_candidates[:5]:
+                                    if candidate_url in seen_photo_urls:
+                                        continue
+                                    candidate_bytes = _download_listing_photo(candidate_url)
+                                    if candidate_bytes:
+                                        image_url = candidate_url
+                                        photo_bytes = candidate_bytes
+                                        seen_photo_urls.add(candidate_url)
+                                        break
+
+                                if photo_bytes:
+                                    st.image(photo_bytes, use_container_width=True)
                                     st.caption(f"Actual listing photo supplied by {provider_name}")
                                 else:
                                     st.markdown(
@@ -1328,7 +1370,7 @@ with st.container(border=True):
                                         "border:1px dashed rgba(90,120,160,.45);border-radius:18px;"
                                         "background:rgba(255,255,255,.30);color:#60748d;text-align:center;padding:18px;'>"
                                         "<div><div style='font-size:34px;'>🏡</div>"
-                                        "<b>Actual photo not provided</b><br><small>We won't substitute a random property image.</small></div></div>",
+                                        "<b>Actual listing photo unavailable</b><br><small>The source did not provide a usable photo URL. We won't show a random image.</small></div></div>",
                                         unsafe_allow_html=True
                                     )
 
